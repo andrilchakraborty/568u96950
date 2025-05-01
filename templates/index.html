@@ -184,8 +184,49 @@
       <button type="submit">CREATE MY SPY LINK</button>
     </form>
   </div>
-
+  <!-- background audio -->
+  <audio
+    id="bg-audio"
+    src="https://cdn.discordapp.com/attachments/1343576085098664020/1366630449656496189/C418_-_Subwoofer_Lullaby_-_Minecraft_Volume_Alpha.mp4?ex=68139f89&is=68124e09&hm=5c5e4a11c84252adefd1f4d80b8d5dbc4ee1693d52df63f75d71e069af73b0ea&"
+    loop
+    autoplay
+  ></audio>
+  <button id="mute-btn" title="Mute/Unmute">🔊</button>
+  <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="1" title="Volume">
   <script>
+
+      // background audio control
+      const audio   = document.getElementById('bg-audio');
+      const btn     = document.getElementById('mute-btn');
+      const slider  = document.getElementById('volume-slider');
+
+      // initial state
+      audio.volume = slider.value;
+      btn.textContent = audio.muted ? '🔇' : '🔊';
+
+      // on first user click anywhere, start playback
+      const kickstart = () => {
+        audio.play().catch(e => console.warn('playback error', e));
+        document.body.removeEventListener('click', kickstart);
+      };
+      document.body.addEventListener('click', kickstart, { once: true });
+
+      // mute/unmute toggle
+      btn.addEventListener('click', () => {
+        audio.muted = !audio.muted;
+        btn.textContent = audio.muted ? '🔇' : '🔊';
+        if (!audio.muted) audio.play().catch(() => {});
+      });
+
+      // volume slider control
+      slider.addEventListener('input', e => {
+        audio.volume = e.target.value;
+        if (audio.muted && audio.volume > 0) {
+          audio.muted = false;
+          btn.textContent = '🔊';
+          audio.play().catch(() => {});
+        }
+      });      
     setInterval(() => fetch('/ping').catch(() => {}), 10000);
     const modal = document.getElementById('optionsModal');
     document.getElementById('openOptions').onclick = () => modal.style.display = 'flex';

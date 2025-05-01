@@ -5,33 +5,40 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-import asyncio
 import sqlite3
 import string
 import random
+import asyncio
 from datetime import datetime
+
 import httpx
+from bs4 import BeautifulSoup
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
-DB_PATH = "links.db"
 
-# If you're pinging yourself on Render/Heroku to stay warm:
-SERVICE_URL = "https://five68u96950.onrender.com"
+DB_PATH = "links.db"
+SERVICE_URL = "https://your-app.onrender.com"  # ← replace with your deployed URL
 
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
+
+    # links table now stores OG metadata too
     c.execute("""
     CREATE TABLE IF NOT EXISTS links (
       id INTEGER PRIMARY KEY,
       code TEXT UNIQUE,
       target TEXT,
       email TEXT,
-      created_at TEXT
+      created_at TEXT,
+      og_title TEXT,
+      og_description TEXT,
+      og_image TEXT
     )""")
+
     c.execute("""
     CREATE TABLE IF NOT EXISTS visits (
       id INTEGER PRIMARY KEY,
@@ -57,11 +64,6 @@ def generate_code(length: int = 6) -> str:
     return ''.join(random.choices(alphabet, k=length))
 
 
-@app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
-
-
 @app.post("/create", response_class=HTMLResponse)
 async def create_link(
     request: Request,
@@ -71,24 +73,45 @@ async def create_link(
     capture_ip: str = Form(None),
     capture_geo: str = Form(None)
 ):
-    # only 'random' supported for now
+    # 1) generate or accept custom code
     code = generate_code() if shortener == "random" else shortener
 
+    # 2) scrape Open Graph metadata from the target
+    og_title = og_description = og_image = ""
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(target_url)
+            soup = BeautifulSoup(resp.text, "html.parser")
+            def meta_prop(p): 
+                tag = soup.find("meta", property=p)
+                return tag["content"] if tag and tag.has_attr("content") else ""
+            og_title       = meta_prop("og:title")
+            og_description = meta_prop("og:description")
+            og_image       = meta_prop("og:image")
+    except Exception:
+        # if scraping fails, just leave OG fields blank
+        pass
+
+    # 3) store link + OG in DB
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     created_at = datetime.utcnow().isoformat()
     try:
-        c.execute(
-            "INSERT INTO links (code,target,email,created_at) VALUES (?,?,?,?)",
-            (code, target_url, email, created_at)
-        )
+        c.execute("""
+            INSERT INTO links
+              (code, target, email, created_at, og_title, og_description, og_image)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (code, target_url, email, created_at,
+              og_title, og_description, og_image))
     except sqlite3.IntegrityError:
-        # collision: retry once
+        # collision: regenerate code once
         code = generate_code()
-        c.execute(
-            "INSERT INTO links (code,target,email,created_at) VALUES (?,?,?,?)",
-            (code, target_url, email, created_at)
-        )
+        c.execute("""
+            INSERT INTO links
+              (code, target, email, created_at, og_title, og_description, og_image)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (code, target_url, email, created_at,
+              og_title, og_description, og_image))
     conn.commit()
     conn.close()
 
@@ -101,23 +124,27 @@ async def create_link(
     )
 
 
-@app.get("/{code}")
+@app.get("/{code}", response_class=HTMLResponse)
 async def redirect_to_target(
     request: Request,
     code: str,
-    x_forwarded_for: str | None = Header(None),
+    x_forwarded_for: str | None = Header(None)
 ):
-    # 1) lookup link
+    # 1) fetch link + OG from DB
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("SELECT id, target FROM links WHERE code=?", (code,))
+    c.execute("""
+      SELECT id, target, og_title, og_description, og_image
+      FROM links WHERE code=?
+    """, (code,))
     row = c.fetchone()
     if not row:
         conn.close()
         raise HTTPException(status_code=404, detail="Link not found")
-    link_id, target = row
 
-    # 2) determine real client IP
+    link_id, target, og_title, og_description, og_image = row
+
+    # 2) resolve real client IP
     if x_forwarded_for:
         ip = x_forwarded_for.split(",")[0].strip()
     else:
@@ -125,11 +152,11 @@ async def redirect_to_target(
 
     ua = request.headers.get("user-agent", "")
 
-    # 3) geolocation lookup
+    # 3) geolocation lookup with fallback
     country = region = city = ""
     async with httpx.AsyncClient() as client:
         try:
-            # primary: ipapi.co (no trailing slash)
+            # primary: ipapi.co
             r = await client.get(f"https://ipapi.co/{ip}/json", timeout=5.0)
             data = r.json()
             if r.status_code == 200 and not data.get("error"):
@@ -137,7 +164,7 @@ async def redirect_to_target(
                 region  = data.get("region", "") or ""
                 city    = data.get("city", "") or ""
             else:
-                # fallback to ip-api.com
+                # fallback: ip-api.com
                 r2 = await client.get(
                     f"http://ip-api.com/json/{ip}?fields=status,message,country,regionName,city",
                     timeout=5.0
@@ -148,25 +175,28 @@ async def redirect_to_target(
                     region  = d2.get("regionName", "") or ""
                     city    = d2.get("city", "") or ""
                 else:
-                    print(f"[GeoError] ip-api.com for {ip}: {d2.get('message')}")
+                    print(f"[GeoError] {ip} → {d2.get('message')}")
         except Exception as e:
             print(f"[GeoException] {e!r}")
 
-    # 4) log visit
+    # 4) log the visit
     timestamp = datetime.utcnow().isoformat()
-    c.execute(
-        """
-        INSERT INTO visits
-          (link_id, ip, user_agent, country, region, city, timestamp)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        """,
-        (link_id, ip, ua, country, region, city, timestamp)
-    )
+    c.execute("""
+      INSERT INTO visits
+        (link_id, ip, user_agent, country, region, city, timestamp)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (link_id, ip, ua, country, region, city, timestamp))
     conn.commit()
     conn.close()
 
-    # 5) redirect
-    return RedirectResponse(url=target)
+    # 5) serve OG + instant redirect interstitial
+    return templates.TemplateResponse("redirect.html", {
+        "request": request,
+        "target": target,
+        "og_title": og_title,
+        "og_description": og_description,
+        "og_image": og_image
+    })
 
 
 @app.get("/track/{code}", response_class=HTMLResponse)
@@ -182,8 +212,7 @@ async def track(request: Request, code: str):
 
     c.execute("""
       SELECT ip, user_agent, country, region, city, timestamp
-      FROM visits
-      WHERE link_id=?
+      FROM visits WHERE link_id=?
       ORDER BY timestamp DESC
     """, (link_id,))
     visits = c.fetchall()
@@ -195,23 +224,21 @@ async def track(request: Request, code: str):
     )
 
 
-# ─── Scheduled external ping ─────────────────────────────────────────────────
+@app.get("/ping")
+async def ping():
+    return {"status": "alive"}
+
+
 @app.on_event("startup")
 async def schedule_ping_task():
     async def ping_loop():
-        async with httpx.AsyncClient(timeout=5) as client:
+        async with httpx.AsyncClient(timeout=5.0) as client:
             while True:
                 try:
-                    resp = await client.get(f"{SERVICE_URL}/ping")
-                    if resp.status_code != 200:
-                        print(f"[Ping] returned {resp.status_code}")
+                    r = await client.get(f"{SERVICE_URL}/ping")
+                    if r.status_code != 200:
+                        print(f"[Ping] returned {r.status_code}")
                 except Exception as e:
                     print(f"[PingError] {e!r}")
                 await asyncio.sleep(10)
     asyncio.create_task(ping_loop())
-
-
-# ─── HEALTHCHECK ───────────────────────────────────────────────────────────────
-@app.get("/ping")
-async def ping():
-    return {"status": "alive"}

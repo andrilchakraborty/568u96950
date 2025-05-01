@@ -1,0 +1,83 @@
+/* static/style.css */
+body {
+  margin: 0;
+  padding: 0;
+  background: radial-gradient(circle at top, #1a1a1a, #000000);
+  font-family: Arial, sans-serif;
+  color: #ddd;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+.container {
+  background: rgba(0,0,0,0.6);
+  padding: 30px 40px;
+  border-radius: 8px;
+  max-width: 500px;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+}
+h1 {
+  margin: 0 0 10px;
+  font-size: 36px;
+  letter-spacing: 2px;
+}
+.subtitle {
+  font-size: 14px;
+  margin-bottom: 20px;
+  line-height: 1.4;
+}
+form label {
+  display: block;
+  text-align: left;
+  margin: 15px 0 5px;
+  font-size: 13px;
+}
+form input[type="text"],
+form input[type="email"],
+form select {
+  width: 100%;
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+form input[type="checkbox"] {
+  margin-right: 5px;
+}
+button {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background: #444;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+button:hover {
+  background: #555;
+}
+a {
+  color: #88c0d0;
+  text-decoration: none;
+  font-size: 12px;
+}
+a:hover {
+  text-decoration: underline;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+th, td {
+  padding: 8px;
+  border: 1px solid #333;
+  font-size: 12px;
+  text-align: left;
+}
+th {
+  background: #222;
+}

@@ -43,6 +43,7 @@
     }
     .overview {
       text-align: center;
+      margin-bottom: 2rem;
     }
     .overview h1 {
       font-size: 2rem;
@@ -53,7 +54,6 @@
       flex-wrap: wrap;
       gap: 1rem;
       justify-content: center;
-      margin-bottom: 2rem;
     }
     .stat-card {
       flex: 1 1 150px;
@@ -72,7 +72,6 @@
       font-size: 0.85rem;
       color: #bbb;
     }
-
     .visits {
       display: grid;
       gap: 1rem;
@@ -83,13 +82,14 @@
       border-radius: 6px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.5);
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) 2fr;
-      gap: 0.5rem 1rem;
-      align-items: start;
+      grid-template-columns: max-content 1fr;
+      column-gap: 1rem;
+      row-gap: 0.5rem;
     }
     .visit-card .label {
       font-size: 0.8rem;
       color: #888;
+      white-space: nowrap;
     }
     .visit-card .value {
       font-size: 0.9rem;

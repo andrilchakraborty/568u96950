@@ -19,7 +19,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 DB_PATH = "links.db"
-SERVICE_URL = "https://your-app.onrender.com"  # ← replace with your deployed URL
+SERVICE_URL = "https://spylink-x8w5.onrender.com/"  # ← replace with your deployed URL
 
 
 def init_db():

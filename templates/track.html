@@ -134,7 +134,7 @@
         <div class="stat-card">
           <div class="stat-value">
             {% if visits %}
-              {{ visits[0][5] }}
+              {{ visits[0][19] }}
             {% else %}
               —
             {% endif %}
@@ -154,23 +154,34 @@
           <table>
             <thead>
               <tr>
-                <th>Time (UTC)</th>
-                <th>IP Address</th>
+                <th>IP</th>
+                <th>Host</th>
+                <th>Provider</th>
+                <th>Proxy</th>
+                <th>Continent</th>
                 <th>Country</th>
                 <th>Region</th>
                 <th>City</th>
+                <th>Lat/Long</th>
+                <th>Browser</th>
+                <th>Cookies</th>
+                <th>Flash</th>
+                <th>Java</th>
+                <th>Plugins</th>
+                <th>OS</th>
+                <th>Resolution</th>
+                <th>Local Time</th>
+                <th>Time Zone</th>
                 <th>User-Agent</th>
+                <th>Timestamp (UTC)</th>
               </tr>
             </thead>
             <tbody>
               {% for row in visits %}
                 <tr>
-                  <td>{{ row[5] }}</td>
-                  <td>{{ row[0] }}</td>
-                  <td>{{ row[2] }}</td>
-                  <td>{{ row[3] }}</td>
-                  <td>{{ row[4] }}</td>
-                  <td>{{ row[1] }}</td>
+                  {% for cell in row %}
+                    <td>{{ cell }}</td>
+                  {% endfor %}
                 </tr>
               {% endfor %}
             </tbody>

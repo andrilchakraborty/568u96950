@@ -1,0 +1,31 @@
+<!-- templates/redirect.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ og_title or "Redirecting…" }}</title>
+
+  <!-- Open Graph tags for embed preview -->
+  {% if og_title %}
+    <meta property="og:title"       content="{{ og_title }}">
+  {% endif %}
+  {% if og_description %}
+    <meta property="og:description" content="{{ og_description }}">
+  {% endif %}
+  {% if og_image %}
+    <meta property="og:image"       content="{{ og_image }}">
+  {% endif %}
+  <meta property="og:url"         content="{{ request.url }}">
+  <meta name="twitter:card"       content="summary_large_image">
+
+  <!-- instant redirect for bots that respect meta-refresh -->
+  <meta http-equiv="refresh" content="0;url={{ target }}">
+  <script>
+    // and JS redirect for normal users
+    window.location.replace("{{ target }}");
+  </script>
+</head>
+<body>
+  Redirecting to <a href="{{ target }}">{{ target }}</a>…
+</body>
+</html>

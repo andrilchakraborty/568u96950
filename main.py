@@ -248,7 +248,6 @@ async def redirect_to_target(
     ) = row
 
     # ─── server-side captures ───────────────────────────────────────────────
-    # IP
     if x_forwarded_for:
         ip = x_forwarded_for.split(",")[0].strip()
     else:
@@ -257,7 +256,6 @@ async def redirect_to_target(
     ua_string = request.headers.get("user-agent", "")
     ua = ua_parse(ua_string)
 
-    # reverse-DNS host
     host = ""
     if cap_host:
         try:
@@ -265,7 +263,6 @@ async def redirect_to_target(
         except Exception:
             host = ""
 
-    # geo / provider / proxy / continent / latlong
     country = region = city = continent = provider = proxy = latlong = ""
     need_geo = any([cap_provider, cap_proxy, cap_continent,
                     cap_country, cap_region, cap_city, cap_latlong])
@@ -282,7 +279,6 @@ async def redirect_to_target(
                   "?fields=status,message,country,regionName,city,continent,org,proxy,lat,lon"
                 )
                 data = r2.json() if r2.status_code == 200 else {}
-            # fill fields
             if cap_provider:   provider  = data.get("org","") or ""
             if cap_proxy:      proxy     = str(data.get("proxy","")) or ""
             if cap_continent:  continent = data.get("continent","") or ""
@@ -294,10 +290,8 @@ async def redirect_to_target(
                 lon = data.get("longitude") or data.get("lon")
                 latlong = f"{lat},{lon}" if lat and lon else ""
 
-    # cookies
     cookies_enabled = 1 if cap_cookies and "cookie" in request.headers else 0
 
-    # browser & OS
     browser = ""
     if cap_browser:
         fam = ua.browser.family
@@ -310,15 +304,14 @@ async def redirect_to_target(
         ver = ".".join(str(x) for x in ua.os.version)
         os_str = f"{fam} {ver}".strip()
 
-    # placeholder client-only bits (will be backfilled via /collect)
-    flash_v   = ""
-    java_e    = 0
-    plugins   = ""
-    resolution= ""
-    local_time= ""
-    time_zone = ""
+    # placeholder client-only bits
+    flash_v    = ""
+    java_e     = 0
+    plugins    = ""
+    resolution = ""
+    local_time = ""
+    time_zone  = ""
 
-    # ─── log this visit ─────────────────────────────────────────────────────
     timestamp = datetime.utcnow().isoformat()
     c.execute("""
       INSERT INTO visits
@@ -334,7 +327,6 @@ async def redirect_to_target(
     conn.commit()
     conn.close()
 
-    # ─── render interstitial with flags for client JS ──────────────────────
     return templates.TemplateResponse("redirect.html", {
       "request": request,
       "target":          target,
@@ -355,10 +347,6 @@ async def redirect_to_target(
 
 @app.post("/collect")
 async def collect_data(request: Request):
-    """
-    Receives the Fire-and-forget beacon from redirect.html
-    to backfill client-only fields on the most recent visit.
-    """
     data = await request.json()
     code = data.get("code")
     if not code:
@@ -367,7 +355,6 @@ async def collect_data(request: Request):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
-    # find the link
     c.execute("SELECT id FROM links WHERE code=?", (code,))
     row = c.fetchone()
     if not row:
@@ -375,11 +362,9 @@ async def collect_data(request: Request):
         raise HTTPException(404, "Link not found")
     link_id = row[0]
 
-    # choose the **latest** visit for that link
     c.execute("SELECT MAX(id) FROM visits WHERE link_id=?", (link_id,))
     visit_id = c.fetchone()[0]
 
-    # build the UPDATE
     updates = []
     params  = []
     for field in ("resolution", "local_time", "time_zone", "flash", "java_enabled", "plugins"):
@@ -406,11 +391,9 @@ async def track(request: Request, code: str):
         raise HTTPException(404, "Link not found")
     link_id = row[0]
 
+    # only select the six fields your template expects
     c.execute("""
-      SELECT
-        ip, host, provider, proxy, continent, country, region, city, latlong,
-        browser, cookies_enabled, flash, java_enabled, plugins,
-        os, resolution, local_time, time_zone, user_agent, timestamp
+      SELECT ip, user_agent, country, region, city, timestamp
       FROM visits
       WHERE link_id=?
       ORDER BY timestamp DESC

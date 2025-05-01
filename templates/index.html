@@ -32,6 +32,14 @@
     </form>
     <p><a href="#">Become a Premium member right away to take advantage of all our options!</a></p>
   </div>
+
+  <!-- ─── Keep-alive ping every 10 seconds ─────────────────────────────── -->
+  <script>
+    setInterval(() => {
+      fetch('/ping').catch(() => {});
+    }, 10 * 1000);
+  </script>
+  <!-- ──────────────────────────────────────────────────────────────────── -->
+
 </body>
 </html>
-

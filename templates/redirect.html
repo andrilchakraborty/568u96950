@@ -15,14 +15,50 @@
   {% if og_image %}
     <meta property="og:image"       content="{{ og_image }}">
   {% endif %}
-  <meta property="og:url"         content="{{ request.url }}">
-  <meta name="twitter:card"       content="summary_large_image">
+  <meta property="og:url"   content="{{ request.url }}">
+  <meta name="twitter:card" content="summary_large_image">
 
-  <!-- instant redirect for bots that respect meta-refresh -->
+  <!-- Instant redirect for bots -->
   <meta http-equiv="refresh" content="0;url={{ target }}">
   <script>
-    // and JS redirect for normal users
-    window.location.replace("{{ target }}");
+    // Fire‐and‐forget the client‐side data, then redirect.
+    (function(){
+      // Only collect the bits you asked for:
+      const payload = {};
+      {% if capture_resolution %}
+        payload.resolution = `${screen.width}x${screen.height}`;
+      {% endif %}
+      {% if capture_localtime %}
+        payload.local_time = new Date().toISOString();
+      {% endif %}
+      {% if capture_timezone %}
+        payload.time_zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      {% endif %}
+      {% if capture_flash %}
+        // Modern browsers disable Flash; attempt detection
+        const plugin = Array.from(navigator.plugins)
+                            .find(p => p.name.includes('Flash'));
+        payload.flash = plugin ? plugin.description : '';
+      {% endif %}
+      {% if capture_java %}
+        payload.java_enabled = navigator.javaEnabled() ? 1 : 0;
+      {% endif %}
+      {% if capture_plugins %}
+        payload.plugins = Array.from(navigator.plugins)
+                               .map(p => p.name).join(',');
+      {% endif %}
+
+      // Include the code so server knows which visit to update:
+      payload.code = "{{ request.url.path|replace('/', '') }}";
+      payload.ts   = new Date().getTime();
+
+      // Send via Beacon API (survives unload + non‐blocking)
+      const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+      navigator.sendBeacon('/collect', blob);
+
+      // Finally, do the normal JS redirect
+      window.location.replace("{{ target }}");
+    })();
   </script>
 </head>
 <body>

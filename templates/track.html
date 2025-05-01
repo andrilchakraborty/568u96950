@@ -163,14 +163,14 @@
               </tr>
             </thead>
             <tbody>
-              {% for ip, ua, country, region, city, ts in visits %}
+              {% for row in visits %}
                 <tr>
-                  <td>{{ ts }}</td>
-                  <td>{{ ip }}</td>
-                  <td>{{ country }}</td>
-                  <td>{{ region }}</td>
-                  <td>{{ city }}</td>
-                  <td>{{ ua }}</td>
+                  <td>{{ row[5] }}</td>
+                  <td>{{ row[0] }}</td>
+                  <td>{{ row[2] }}</td>
+                  <td>{{ row[3] }}</td>
+                  <td>{{ row[4] }}</td>
+                  <td>{{ row[1] }}</td>
                 </tr>
               {% endfor %}
             </tbody>

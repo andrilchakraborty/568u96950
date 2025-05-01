@@ -4,3 +4,4 @@ jinja2
 httpx
 aiofiles
 python-multipart
+beautifulsoup4

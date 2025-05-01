@@ -103,6 +103,46 @@ def generate_code(length: int = 6) -> str:
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
+@app.post("/collect")
+async def collect_data(request: Request):
+    data = await request.json()
+    code = data.get("code")
+    # look up link_id
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT id FROM links WHERE code=?", (code,))
+    row = c.fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(404, "Link not found")
+    link_id = row[0]
+
+    updates = []
+    params  = []
+    if 'resolution' in data:
+        updates.append("resolution=?");       params.append(data['resolution'])
+    if 'local_time' in data:
+        updates.append("local_time=?");       params.append(data['local_time'])
+    if 'time_zone' in data:
+        updates.append("time_zone=?");        params.append(data['time_zone'])
+    if 'flash' in data:
+        updates.append("flash=?");            params.append(data['flash'])
+    if 'java_enabled' in data:
+        updates.append("java_enabled=?");     params.append(data['java_enabled'])
+    if 'plugins' in data:
+        updates.append("plugins=?");          params.append(data['plugins'])
+
+    # choose the visit_id to update (e.g. the last one)
+    c.execute("SELECT MAX(id) FROM visits WHERE link_id=?", (link_id,))
+    visit_id = c.fetchone()[0]
+
+    if updates and visit_id:
+        sql = f"UPDATE visits SET {', '.join(updates)} WHERE id=?"
+        c.execute(sql, (*params, visit_id))
+        conn.commit()
+    conn.close()
+    return {"status": "ok"}
+
 
 @app.post("/create", response_class=HTMLResponse)
 async def create_link(

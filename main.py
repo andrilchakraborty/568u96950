@@ -21,9 +21,7 @@ templates = Jinja2Templates(directory="templates")
 DB_PATH = "links.db"
 SERVICE_URL = "https://spylink-x8w5.onrender.com/"  # ← replace with your deployed URL
 
-@app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -54,6 +52,11 @@ def init_db():
     )""")
     conn.commit()
     conn.close()
+
+@app.get("/", response_class=HTMLResponse)
+async def read_root(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
+
 
 
 @app.on_event("startup")

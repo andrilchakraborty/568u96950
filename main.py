@@ -14,6 +14,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 DB_PATH = "links.db"
 
+SERVICE_URL = "https://five68u96950.onrender.com/"
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)

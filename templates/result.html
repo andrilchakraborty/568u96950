@@ -1,0 +1,21 @@
+<!-- templates/result.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Your Spy Link</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Spy Link Created!</h1>
+    <p><strong>Share this link:</strong></p>
+    <p><a href="{{ link_url }}">{{ link_url }}</a></p>
+    <hr>
+    <h1>Tracking Dashboard</h1>
+    <p><strong>View visits here:</strong></p>
+    <p><a href="{{ track_url }}">{{ track_url }}</a></p>
+    <p style="margin-top:20px;"><a href="/">← Create another spy link</a></p>
+  </div>
+</body>
+</html>

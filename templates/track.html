@@ -1,0 +1,46 @@
+<!-- templates/track.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tracking: {{ code }}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Tracking Dashboard</h1>
+    <p>Link code: <strong>{{ code }}</strong></p>
+
+    {% if visits %}
+      <table>
+        <thead>
+          <tr>
+            <th>Timestamp (UTC)</th>
+            <th>IP</th>
+            <th>Country</th>
+            <th>Region</th>
+            <th>City</th>
+            <th>User-Agent</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for ip, ua, country, region, city, ts in visits %}
+          <tr>
+            <td>{{ ts }}</td>
+            <td>{{ ip }}</td>
+            <td>{{ country }}</td>
+            <td>{{ region }}</td>
+            <td>{{ city }}</td>
+            <td style="word-break:break-all;">{{ ua }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No one has clicked this link yet.</p>
+    {% endif %}
+
+    <p style="margin-top:20px;"><a href="/">← Back to create page</a></p>
+  </div>
+</body>
+</html>

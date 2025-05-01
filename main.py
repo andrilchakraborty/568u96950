@@ -384,6 +384,7 @@ async def collect_data(request: Request):
 async def track(request: Request, code: str):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
+    # find the numeric link_id
     c.execute("SELECT id FROM links WHERE code=?", (code,))
     row = c.fetchone()
     if not row:
@@ -391,9 +392,12 @@ async def track(request: Request, code: str):
         raise HTTPException(404, "Link not found")
     link_id = row[0]
 
-    # only select the six fields your template expects
+    # ← select every single column (in the order your INSERT used)
     c.execute("""
-      SELECT ip, user_agent, country, region, city, timestamp
+      SELECT
+        ip, host, provider, proxy, continent, country, region, city, latlong,
+        browser, cookies_enabled, flash, java_enabled, plugins,
+        os, resolution, local_time, time_zone, user_agent, timestamp
       FROM visits
       WHERE link_id=?
       ORDER BY timestamp DESC

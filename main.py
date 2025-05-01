@@ -158,3 +158,25 @@ async def track(request: Request, code: str):
         "track.html",
         {"request": request, "code": code, "visits": visits}
     )
+
+
+# ─── Scheduled external ping ─────────────────────────────────────────────────
+@app.on_event("startup")
+async def schedule_ping_task():
+    async def ping_loop():
+        async with httpx.AsyncClient(timeout=5) as client:
+            while True:
+                try:
+                    resp = await client.get(f"{SERVICE_URL}/ping")
+                    if resp.status_code != 200:
+                        print(f"Health ping returned {resp.status_code}")
+                except Exception as e:
+                    print(f"External ping failed: {e!r}")
+                await asyncio.sleep(10)
+    asyncio.create_task(ping_loop())
+
+# ─── HEALTHCHECK ───────────────────────────────────────────────────────────────
+@app.get("/ping")
+async def ping():
+    return {"status": "alive"}
+

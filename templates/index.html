@@ -1,0 +1,37 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SPYLINK</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>SPYLINK</h1>
+    <p class="subtitle">
+      You want to locate someone? You want to find someone's IP address? You would like to know what version of Windows a friend is using or his computer configuration, without him knowing? Easy! Create a spy link in 4 clicks and send it to the person you want to spy on. As soon as the person clicks the link, you will immediately and discreetly receive his private information in your mail box.
+    </p>
+    <form method="post" action="/create">
+      <label>1) Redirect the spy link to the website:</label>
+      <input type="text" name="target_url" placeholder="http://youtube.com" required>
+
+      <label>2) Choose a URL shortener:</label>
+      <select name="shortener">
+        <option value="random">Random</option>
+      </select>
+
+      <label>3) Enter your email address:</label>
+      <input type="email" name="email" placeholder="you@example.com" required>
+
+      <label>4) Select info to capture:</label>
+      <label><input type="checkbox" name="capture_ip" checked> IP Address</label>
+      <label><input type="checkbox" name="capture_geo" checked> Geolocation</label>
+
+      <button type="submit">CREATE MY SPY LINK</button>
+    </form>
+    <p><a href="#">Become a Premium member right away to take advantage of all our options!</a></p>
+  </div>
+</body>
+</html>
+

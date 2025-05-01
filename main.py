@@ -1,5 +1,3 @@
-# main.py
-
 from fastapi import FastAPI, Request, Form, Header, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -11,10 +9,14 @@ import random
 import asyncio
 from datetime import datetime
 import socket
+import os
 
 import httpx
 from bs4 import BeautifulSoup
 from user_agents import parse as ua_parse  # pip install pyyaml ua-parser user-agents
+
+# Environment config
+BITLY_TOKEN = os.getenv("BITLY_TOKEN")  # Set this in your environment for Bitly integration
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -101,6 +103,26 @@ def generate_code(length: int = 6) -> str:
     return ''.join(random.choices(alphabet, k=length))
 
 
+# ─── External URL Shortener Helpers ─────────────────────────────────────
+async def shorten_with_tinyurl(url: str) -> str:
+    api_url = f"http://tinyurl.com/api-create.php?url={url}"
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        resp = await client.get(api_url)
+        return resp.text if resp.status_code == 200 else url
+
+async def shorten_with_bitly(url: str) -> str:
+    if not BITLY_TOKEN:
+        return url
+    headers = {"Authorization": f"Bearer {BITLY_TOKEN}", "Content-Type": "application/json"}
+    payload = {"long_url": url}
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        resp = await client.post("https://api-ssl.bitly.com/v4/shorten", json=payload, headers=headers)
+        if resp.status_code == 200:
+            data = resp.json()
+            return data.get("link", url)
+        return url
+
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
@@ -133,8 +155,13 @@ async def create_link(
     capture_localtime: str  = Form(None),
     capture_timezone: str   = Form(None)
 ):
-    # 1) generate or accept custom code
-    code = generate_code() if shortener == "random" else shortener
+    # 1) determine code for local redirect
+    if shortener == "random":
+        code = generate_code()
+    elif shortener in ("tinyurl", "bitly"):
+        code = generate_code()  # always use a random code for local tracking
+    else:
+        code = shortener  # user-provided custom code
 
     # 2) scrape Open Graph metadata
     og_title = og_description = og_image = ""
@@ -151,31 +178,29 @@ async def create_link(
     except Exception:
         pass
 
-    # 3) collect all flags
-    flags = {
-      'capture_ip':         bool(capture_ip),
-      'capture_host':       bool(capture_host),
-      'capture_provider':   bool(capture_provider),
-      'capture_proxy':      bool(capture_proxy),
-      'capture_continent':  bool(capture_continent),
-      'capture_country':    bool(capture_country),
-      'capture_region':     bool(capture_region),
-      'capture_city':       bool(capture_city),
-      'capture_latlong':    bool(capture_latlong),
+    # 3) collect capture flags
+    flags = { key: bool(val) for key, val in {
+      'capture_ip': capture_ip,
+      'capture_host': capture_host,
+      'capture_provider': capture_provider,
+      'capture_proxy': capture_proxy,
+      'capture_continent': capture_continent,
+      'capture_country': capture_country,
+      'capture_region': capture_region,
+      'capture_city': capture_city,
+      'capture_latlong': capture_latlong,
+      'capture_browser': capture_browser,
+      'capture_cookies': capture_cookies,
+      'capture_flash': capture_flash,
+      'capture_java': capture_java,
+      'capture_plugins': capture_plugins,
+      'capture_os': capture_os,
+      'capture_resolution': capture_resolution,
+      'capture_localtime': capture_localtime,
+      'capture_timezone': capture_timezone
+    }.items() }
 
-      'capture_browser':    bool(capture_browser),
-      'capture_cookies':    bool(capture_cookies),
-      'capture_flash':      bool(capture_flash),
-      'capture_java':       bool(capture_java),
-      'capture_plugins':    bool(capture_plugins),
-
-      'capture_os':         bool(capture_os),
-      'capture_resolution': bool(capture_resolution),
-      'capture_localtime':  bool(capture_localtime),
-      'capture_timezone':   bool(capture_timezone),
-    }
-
-    # 4) insert link + flags (no email)
+    # 4) insert link + flags
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     created_at = datetime.utcnow().isoformat()
@@ -192,7 +217,7 @@ async def create_link(
             (?, ?, ?, ?, ?, ?, {placeholders})
         """, [code, target_url, created_at, og_title, og_description, og_image, *vals])
     except sqlite3.IntegrityError:
-        # collision; try once more
+        # collision; regenerate
         code = generate_code()
         c.execute(f"""
           INSERT INTO links
@@ -204,12 +229,22 @@ async def create_link(
     conn.commit()
     conn.close()
 
+    # Build URLs
     link_url  = request.url_for("redirect_to_target", code=code)
     track_url = request.url_for("track",            code=code)
 
+    # 5) shorten via selected API if requested
+    if shortener == "tinyurl":
+        short_url = await shorten_with_tinyurl(link_url)
+    elif shortener == "bitly":
+        short_url = await shorten_with_bitly(link_url)
+    else:
+        short_url = link_url
+
+    # 6) return results
     return templates.TemplateResponse(
       "result.html",
-      {"request": request, "link_url": link_url, "track_url": track_url}
+      {"request": request, "link_url": link_url, "track_url": track_url, "short_url": short_url}
     )
 
 

@@ -1,11 +1,14 @@
 # main.py
-from fastapi import FastAPI, Request, Form
+
+from fastapi import FastAPI, Request, Form, Header, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-import asyncio 
+
+import asyncio
 import sqlite3
-import string, random
+import string
+import random
 from datetime import datetime
 import httpx
 
@@ -14,7 +17,9 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 DB_PATH = "links.db"
 
-SERVICE_URL = "https://five68u96950.onrender.com/"
+# If you're pinging yourself on Render/Heroku to stay warm:
+SERVICE_URL = "https://five68u96950.onrender.com"
+
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
@@ -66,7 +71,7 @@ async def create_link(
     capture_ip: str = Form(None),
     capture_geo: str = Form(None)
 ):
-    # only 'random' is supported for now
+    # only 'random' supported for now
     code = generate_code() if shortener == "random" else shortener
 
     conn = sqlite3.connect(DB_PATH)
@@ -78,7 +83,7 @@ async def create_link(
             (code, target_url, email, created_at)
         )
     except sqlite3.IntegrityError:
-        # rare collision: try again
+        # collision: retry once
         code = generate_code()
         c.execute(
             "INSERT INTO links (code,target,email,created_at) VALUES (?,?,?,?)",
@@ -97,42 +102,70 @@ async def create_link(
 
 
 @app.get("/{code}")
-async def redirect_to_target(request: Request, code: str):
-    # lookup
+async def redirect_to_target(
+    request: Request,
+    code: str,
+    x_forwarded_for: str | None = Header(None),
+):
+    # 1) lookup link
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("SELECT id,target FROM links WHERE code=?", (code,))
+    c.execute("SELECT id, target FROM links WHERE code=?", (code,))
     row = c.fetchone()
     if not row:
-        return HTMLResponse("Link not found", status_code=404)
-
+        conn.close()
+        raise HTTPException(status_code=404, detail="Link not found")
     link_id, target = row
 
-    # visitor info
-    ip = request.client.host or ""
+    # 2) determine real client IP
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(",")[0].strip()
+    else:
+        ip = request.client.host or ""
+
     ua = request.headers.get("user-agent", "")
 
-    # geolocation lookup
+    # 3) geolocation lookup
     country = region = city = ""
-    try:
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(f"https://ipapi.co/{ip}/json/", timeout=5.0)
-            data = resp.json()
-            country = data.get("country_name", "")
-            region  = data.get("region", "")
-            city    = data.get("city", "")
-    except Exception:
-        pass
+    async with httpx.AsyncClient() as client:
+        try:
+            # primary: ipapi.co (no trailing slash)
+            r = await client.get(f"https://ipapi.co/{ip}/json", timeout=5.0)
+            data = r.json()
+            if r.status_code == 200 and not data.get("error"):
+                country = data.get("country_name", "") or ""
+                region  = data.get("region", "") or ""
+                city    = data.get("city", "") or ""
+            else:
+                # fallback to ip-api.com
+                r2 = await client.get(
+                    f"http://ip-api.com/json/{ip}?fields=status,message,country,regionName,city",
+                    timeout=5.0
+                )
+                d2 = r2.json()
+                if d2.get("status") == "success":
+                    country = d2.get("country", "") or ""
+                    region  = d2.get("regionName", "") or ""
+                    city    = d2.get("city", "") or ""
+                else:
+                    print(f"[GeoError] ip-api.com for {ip}: {d2.get('message')}")
+        except Exception as e:
+            print(f"[GeoException] {e!r}")
 
+    # 4) log visit
     timestamp = datetime.utcnow().isoformat()
-    c.execute("""
-      INSERT INTO visits
-      (link_id,ip,user_agent,country,region,city,timestamp)
-      VALUES (?,?,?,?,?,?,?)
-    """, (link_id, ip, ua, country, region, city, timestamp))
+    c.execute(
+        """
+        INSERT INTO visits
+          (link_id, ip, user_agent, country, region, city, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (link_id, ip, ua, country, region, city, timestamp)
+    )
     conn.commit()
     conn.close()
 
+    # 5) redirect
     return RedirectResponse(url=target)
 
 
@@ -143,7 +176,8 @@ async def track(request: Request, code: str):
     c.execute("SELECT id FROM links WHERE code=?", (code,))
     row = c.fetchone()
     if not row:
-        return HTMLResponse("Link not found", status_code=404)
+        conn.close()
+        raise HTTPException(status_code=404, detail="Link not found")
     link_id = row[0]
 
     c.execute("""
@@ -170,14 +204,14 @@ async def schedule_ping_task():
                 try:
                     resp = await client.get(f"{SERVICE_URL}/ping")
                     if resp.status_code != 200:
-                        print(f"Health ping returned {resp.status_code}")
+                        print(f"[Ping] returned {resp.status_code}")
                 except Exception as e:
-                    print(f"External ping failed: {e!r}")
+                    print(f"[PingError] {e!r}")
                 await asyncio.sleep(10)
     asyncio.create_task(ping_loop())
+
 
 # ─── HEALTHCHECK ───────────────────────────────────────────────────────────────
 @app.get("/ping")
 async def ping():
     return {"status": "alive"}
-

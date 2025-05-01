@@ -1,10 +1,24 @@
-<!-- templates/result.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Your Spy Link</title>
   <link rel="stylesheet" href="/static/style.css">
+  <style>
+    /* Audio controls styling */
+    #audio-controls {
+      position: fixed;
+      bottom: 1rem;
+      left: 1rem;
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      z-index: 1000;
+    }
+    #mute-btn, #volume-slider {
+      margin: 0;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -17,5 +31,47 @@
     <p><a href="{{ track_url }}">{{ track_url }}</a></p>
     <p style="margin-top:20px;"><a href="/">← Create another spy link</a></p>
   </div>
+
+  <!-- Audio controls container -->
+  <div id="audio-controls">
+    <audio id="bg-audio"
+      src="https://cdn.discordapp.com/attachments/1343576085098664020/1366630449656496189/C418_-_Subwoofer_Lullaby_-_Minecraft_Volume_Alpha.mp4?ex=68139f89&is=68124e09&hm=5c5e4a11c84252adefd1f4d80b8d5dbc4ee1693d52df63f75d71e069af73b0ea&"
+      loop autoplay style="display:none;"></audio>
+    <button id="mute-btn" title="Mute/Unmute">🔊</button>
+    <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="1" title="Volume">
+  </div>
+
+  <script>
+    // Audio control setup
+    const audio = document.getElementById('bg-audio');
+    const btn = document.getElementById('mute-btn');
+    const slider = document.getElementById('volume-slider');
+
+    // Initialize volume and button icon
+    audio.volume = slider.value;
+    btn.textContent = audio.muted ? '🔇' : '🔊';
+
+    // Kick off playback on first interaction
+    document.body.addEventListener('click', () => {
+      audio.play().catch(() => {});
+    }, { once: true });
+
+    // Mute/unmute toggle
+    btn.addEventListener('click', () => {
+      audio.muted = !audio.muted;
+      btn.textContent = audio.muted ? '🔇' : '🔊';
+      if (!audio.muted) audio.play().catch(() => {});
+    });
+
+    // Volume slider control
+    slider.addEventListener('input', (e) => {
+      audio.volume = e.target.value;
+      if (audio.muted && audio.volume > 0) {
+        audio.muted = false;
+        btn.textContent = '🔊';
+        audio.play().catch(() => {});
+      }
+    });
+  </script>
 </body>
 </html>

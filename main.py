@@ -252,6 +252,7 @@ async def create_link(
 async def redirect_to_target(
     request: Request,
     code: str,
+    x_real_ip: str | None = Header(None),
     x_forwarded_for: str | None = Header(None)
 ):
     conn = sqlite3.connect(DB_PATH)
@@ -279,7 +280,11 @@ async def redirect_to_target(
     ) = row
 
     # ─── server-side captures ───────────────────────────────────────────────
-    if x_forwarded_for:
+    # Prioritize X-Real-IP (e.g. from Cloudflare),
+    # then X-Forwarded-For, then fallback to request.client.host
+    if x_real_ip:
+        ip = x_real_ip.strip()
+    elif x_forwarded_for:
         ip = x_forwarded_for.split(",")[0].strip()
     else:
         ip = request.client.host or ""

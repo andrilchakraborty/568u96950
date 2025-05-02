@@ -389,22 +389,18 @@ async def collect_data(request: Request):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
-    c.execute("SELECT id FROM links WHERE code=?", (code,))
-    row = c.fetchone()
-    if not row:
-        conn.close()
-        raise HTTPException(404, "Link not found")
-    link_id = row[0]
-
-    c.execute("SELECT MAX(id) FROM visits WHERE link_id=?", (link_id,))
+    # find latest visit
+    c.execute("SELECT MAX(id) FROM visits WHERE link_id=(SELECT id FROM links WHERE code=?)", (code,))
     visit_id = c.fetchone()[0]
 
     updates = []
-    params  = []
-    for field in ("resolution", "local_time", "time_zone", "flash", "java_enabled", "plugins"):
+    params = []
+    # add cookies_enabled to the list
+    for field in ("cookies_enabled", "resolution", "local_time", "time_zone", "flash", "java_enabled", "plugins"):
         if field in data:
             updates.append(f"{field}=?")
             params.append(data[field])
+
     if updates and visit_id:
         sql = f"UPDATE visits SET {', '.join(updates)} WHERE id=?"
         c.execute(sql, (*params, visit_id))

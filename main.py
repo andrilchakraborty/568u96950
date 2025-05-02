@@ -439,6 +439,16 @@ async def track(request: Request, code: str):
       {"request": request, "code": code, "visits": visits}
     )
 
+@app.get("/api/visit-metadata/{code}")
+async def visit_metadata(code: str):
+    # return JSON { "count": <number of visits> }
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM visits v JOIN links l ON v.link_id = l.id WHERE l.code = ?", (code,))
+    count = c.fetchone()[0]
+    conn.close()
+    return {"count": count}
+
 
 @app.get("/ping")
 async def ping():

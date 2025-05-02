@@ -232,7 +232,7 @@
         });
       }
 
-      // show only the first visitor on load
+      // show only the first (latest) visitor on load
       if (cards.length > 0) {
         select.value = '0';
         showCard('0');
@@ -252,7 +252,7 @@
         }
       });
 
-      // Audio control setup
+      // Audio setup
       const audio = document.getElementById('bg-audio');
       const btn = document.getElementById('mute-btn');
       const slider = document.getElementById('volume-slider');
@@ -261,13 +261,13 @@
       btn.textContent = audio.muted ? '🔇' : '🔊';
 
       document.body.addEventListener('click', () => {
-        audio.play().catch(()=>{});
+        audio.play().catch(() => {});
       }, { once: true });
 
       btn.addEventListener('click', () => {
         audio.muted = !audio.muted;
         btn.textContent = audio.muted ? '🔇' : '🔊';
-        if (!audio.muted) audio.play().catch(()=>{});
+        if (!audio.muted) audio.play().catch(() => {});
       });
 
       slider.addEventListener('input', e => {
@@ -275,9 +275,14 @@
         if (audio.muted && audio.volume > 0) {
           audio.muted = false;
           btn.textContent = '🔊';
-          audio.play().catch(()=>{});
+          audio.play().catch(() => {});
         }
       });
+
+      // auto-refresh every 10 seconds to show the latest click
+      setInterval(() => {
+        window.location.reload();
+      }, 10000);
     });
   </script>
 </body>

@@ -5,4 +5,6 @@ httpx
 aiofiles
 python-multipart
 beautifulsoup4
-user_agents
+user-agents
+pycryptodome    
+pywin32          

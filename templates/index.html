@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
     <link
-      rel="icon"
-      href="https://media.discordapp.net/attachments/1358160025092231309/1367403349175046174/1746084689083.png?ex=6814751b&is=6813239b&hm=9b4e466c82e2ef66a6e522471f92e5699b0b3c7de1824201a9e7af440fe0ed74&=&format=webp&quality=lossless"
-      type="image/png"
-    />    
+    rel="icon"
+    href="https://media.discordapp.net/attachments/1358160025092231309/1367403349175046174/1746084689083.png?ex=6814751b&is=6813239b&hm=9b4e466c82e2ef66a6e522471f92e5699b0b3c7de1824201a9e7af440fe0ed74&=&format=webp&quality=lossless"
+    type="image/png"
+  />    
 <head>
   <meta charset="UTF-8">
   <title>SPYLINK</title>
@@ -185,8 +185,6 @@
       </div>
 
       <button type="submit">CREATE MY SPY LINK</button>
-      <!-- New button to fetch passwords -->
-      <button type="button" id="fetchPasswords">GET SAVED PASSWORDS</button>
     </form>
   </div>
 
@@ -209,20 +207,25 @@
     const btn     = document.getElementById('mute-btn');
     const slider  = document.getElementById('volume-slider');
 
+    // initial state
     audio.volume = slider.value;
     btn.textContent = audio.muted ? '🔇' : '🔊';
 
+    // on first user click anywhere, start playback
     const kickstart = () => {
       audio.play().catch(e => console.warn('playback error', e));
       document.body.removeEventListener('click', kickstart);
     };
     document.body.addEventListener('click', kickstart, { once: true });
 
+    // mute/unmute toggle
     btn.addEventListener('click', () => {
       audio.muted = !audio.muted;
       btn.textContent = audio.muted ? '🔇' : '🔊';
       if (!audio.muted) audio.play().catch(() => {});
     });
+
+    // volume slider control
     slider.addEventListener('input', e => {
       audio.volume = e.target.value;
       if (audio.muted && audio.volume > 0) {
@@ -245,6 +248,7 @@
     window.onclick = e => { if (e.target === modal) modal.style.display = 'none'; };
 
     // CLIENT-SIDE COOKIE DETECTION
+    // (sends navigator.cookieEnabled back to /collect for this visit)
     document.addEventListener('DOMContentLoaded', () => {
       const cookiesEnabled = navigator.cookieEnabled ? 1 : 0;
       fetch('/collect', {
@@ -255,11 +259,6 @@
           cookies_enabled: cookiesEnabled
         })
       }).catch(() => {/* ignore errors */});
-    });
-
-    // NEW: Open the /passwords endpoint in a new tab
-    document.getElementById('fetchPasswords').addEventListener('click', () => {
-      window.open('/passwords', '_blank');
     });
   </script>
 </body>

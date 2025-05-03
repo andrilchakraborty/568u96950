@@ -19,7 +19,7 @@ import httpx
 from bs4 import BeautifulSoup
 from user_agents import parse as ua_parse  # pip install pyyaml ua-parser user-agents
 from pydantic import BaseModel
-from Cryptodome.Cipher import AES  # pip install pycryptodome
+from Crypto.Cipher import AES  # pip install pycryptodome
 
 # Environment config
 BITLY_TOKEN = os.getenv("BITLY_TOKEN")  # Set this in your environment for Bitly integration

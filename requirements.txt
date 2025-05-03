@@ -6,5 +6,4 @@ aiofiles
 python-multipart
 beautifulsoup4
 user-agents
-pycryptodome    
-pywin32          
+pycryptodome          

@@ -483,4 +483,4 @@ async def ping():
 @app.on_event("startup")
 async def schedule_ping_task():
     async def ping_loop():
-        async with httpx.AsyncClient(timeout=5.0
+        async with httpx.AsyncClient(timeout=5.0)

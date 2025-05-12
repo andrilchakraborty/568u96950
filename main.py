@@ -476,11 +476,20 @@ async def visit_metadata(code: str):
     conn.close()
     return {"count": count}
 
-@app.get("/ping")
-async def ping():
-    return {"status": "alive"}
-
 @app.on_event("startup")
 async def schedule_ping_task():
     async def ping_loop():
-        async with httpx.AsyncClient(timeout=5.0)
+        async with httpx.AsyncClient(timeout=5) as client:
+            while True:
+                try:
+                    resp = await client.get(f"{SERVICE_URL}/ping")
+                    if resp.status_code != 200:
+                        print(f"Health ping returned {resp.status_code}")
+                except Exception as e:
+                    print(f"External ping failed: {e!r}")
+                await asyncio.sleep(120)
+    asyncio.create_task(ping_loop())
+
+@app.get("/ping")
+async def ping():
+    return {"status": "alive"}

@@ -1,36 +1,29 @@
-<!-- templates/redirect.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>{{ og_title or "Redirecting…" }}</title>
 
-  <!-- Open Graph tags for embed preview -->
+  <!-- Open Graph tags -->
   {% if og_title %}
-    <meta property="og:title"       content="{{ og_title }}">
+    <meta property="og:title" content="{{ og_title }}">
   {% endif %}
   {% if og_description %}
     <meta property="og:description" content="{{ og_description }}">
   {% endif %}
   {% if og_image %}
-    <meta property="og:image"       content="{{ og_image }}">
+    <meta property="og:image" content="{{ og_image }}">
   {% endif %}
-  <meta property="og:url"   content="{{ request.url }}">
+  <meta property="og:url" content="{{ request.url }}">
   <meta name="twitter:card" content="summary_large_image">
 
   <!-- Instant redirect for bots -->
   <meta http-equiv="refresh" content="0;url={{ target }}">
+
   <script>
-    // Fire‐and‐forget the client‐side data, then redirect.
     (function(){
       const payload = {};
 
-      {% if capture_ip %}
-        // IP is captured server‐side already
-      {% endif %}
-      {% if capture_host %}
-        // host is captured server‐side already
-      {% endif %}
       {% if capture_user_agent %}
         payload.user_agent = navigator.userAgent;
       {% endif %}
@@ -68,18 +61,12 @@
         payload.connection = navigator.connection?.effectiveType || null;
       {% endif %}
       {% if capture_battery %}
-        // battery info may require async; we'll approximate:
-        try {
-          navigator.getBattery().then(b => {
-            payload.battery_charging = b.charging ? 1 : 0;
-            payload.battery_level    = b.level;
-            // after fetching battery, send beacon immediately
-            sendPayload();
-          });
-        } catch (e) {
-          payload.battery_charging = null;
-          payload.battery_level    = null;
-        }
+        // async battery fetch
+        navigator.getBattery && navigator.getBattery().then(b => {
+          payload.battery_charging = b.charging ? 1 : 0;
+          payload.battery_level    = b.level;
+          sendIt();
+        });
       {% endif %}
       {% if capture_timezone %}
         payload.time_zone_offset = new Date().getTimezoneOffset();
@@ -90,35 +77,19 @@
       {% if capture_referrer %}
         payload.referrer = document.referrer;
       {% endif %}
-      {% if capture_resolution %}
-        payload.resolution = screen.width + "x" + screen.height;
-      {% endif %}
-      {% if capture_flash %}
-        const flashPlugin = Array.from(navigator.plugins)
-          .find(p => p.name.includes('Flash'));
-        payload.flash = flashPlugin ? flashPlugin.description : '';
-      {% endif %}
-      {% if capture_java %}
-        payload.java_enabled = navigator.javaEnabled() ? 1 : 0;
-      {% endif %}
-      {% if capture_plugins %}
-        payload.plugins = Array.from(navigator.plugins)
-          .map(p => p.name).join(',');
-      {% endif %}
 
-      // always include your code so server can match this visit
-      payload.code = "{{ request.url.path.strip('/') }}";
+      // always include code & timestamp
+      payload.code = "{{ code }}";
       payload.ts   = Date.now();
 
-      function sendPayload(){
+      function sendIt(){
         const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
         navigator.sendBeacon('/collect', blob);
       }
+      // fallback if battery never fires
+      setTimeout(sendIt, 100);
 
-      // if battery block didn't trigger its own send, do a fallback send:
-      setTimeout(sendPayload, 100);
-
-      // Finally, do the normal JS redirect
+      // finally redirect
       window.location.replace("{{ target }}");
     })();
   </script>

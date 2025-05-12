@@ -63,7 +63,6 @@ def init_db():
       capture_hardware_concurrency INTEGER DEFAULT 0,
       capture_connection INTEGER DEFAULT 0,
       capture_battery INTEGER DEFAULT 0,
-      capture_level INTEGER DEFAULT 0,
       capture_timezone INTEGER DEFAULT 0,
       capture_local_time INTEGER DEFAULT 0,
       capture_referrer INTEGER DEFAULT 0
@@ -365,6 +364,7 @@ async def redirect_to_target(
     os_str  = f"{ua.os.family} {'.'.join(str(x) for x in ua.os.version)}".strip() if cap_os else ""
     timestamp = datetime.utcnow().isoformat()
 
+    # initial visit insert with only IP/geo/browser/os/timestamp
     c.execute("""
       INSERT INTO visits
         (link_id, ip, host, provider, proxy, continent, country, region,
@@ -384,13 +384,23 @@ async def redirect_to_target(
       "og_description": og_description,
       "og_image": og_image,
       "code": code,
-      "flags": {
-        "ua": cap_ua, "lang": cap_lang, "platform": cap_platform,
-        "cookies": cap_cookies, "sw": cap_sw, "sh": cap_sh,
-        "vw": cap_vw, "vh": cap_vh, "cd": cap_cd,
-        "dm": cap_dm, "hc": cap_hc, "conn": cap_conn,
-        "batt": cap_batt, "tz": cap_tz, "lt": cap_lt, "ref": cap_referrer
-      }
+      # these flags control which fields the client script emits
+      "capture_user_agent": cap_ua,
+      "capture_language": cap_lang,
+      "capture_platform": cap_platform,
+      "capture_cookies": cap_cookies,
+      "capture_screen_width": cap_sw,
+      "capture_screen_height": cap_sh,
+      "capture_viewport_width": cap_vw,
+      "capture_viewport_height": cap_vh,
+      "capture_color_depth": cap_cd,
+      "capture_device_memory": cap_dm,
+      "capture_hardware_concurrency": cap_hc,
+      "capture_connection": cap_conn,
+      "capture_battery": cap_batt,
+      "capture_timezone": cap_tz,
+      "capture_local_time": cap_lt,
+      "capture_referrer": cap_referrer
     })
 
 @app.post("/collect")
@@ -473,13 +483,4 @@ async def ping():
 @app.on_event("startup")
 async def schedule_ping_task():
     async def ping_loop():
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            while True:
-                try:
-                    r = await client.get(f"{SERVICE_URL}/ping")
-                    if r.status_code != 200:
-                        print(f"[Ping] returned {r.status_code}")
-                except Exception as e:
-                    print(f"[PingError] {e!r}")
-                await asyncio.sleep(10)
-    asyncio.create_task(ping_loop())
+        async with httpx.AsyncClient(timeout=5.0

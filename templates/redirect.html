@@ -23,38 +23,100 @@
   <script>
     // Fire‐and‐forget the client‐side data, then redirect.
     (function(){
-      // Only collect the bits you asked for:
       const payload = {};
-      {% if capture_resolution %}
-        payload.resolution = `${screen.width}x${screen.height}`;
+
+      {% if capture_ip %}
+        // IP is captured server‐side already
       {% endif %}
-      {% if capture_localtime %}
-        payload.local_time = new Date().toISOString();
+      {% if capture_host %}
+        // host is captured server‐side already
+      {% endif %}
+      {% if capture_user_agent %}
+        payload.user_agent = navigator.userAgent;
+      {% endif %}
+      {% if capture_language %}
+        payload.language = navigator.language;
+      {% endif %}
+      {% if capture_platform %}
+        payload.platform = navigator.platform;
+      {% endif %}
+      {% if capture_cookies %}
+        payload.cookies_enabled = navigator.cookieEnabled ? 1 : 0;
+      {% endif %}
+      {% if capture_screen_width %}
+        payload.screen_width = screen.width;
+      {% endif %}
+      {% if capture_screen_height %}
+        payload.screen_height = screen.height;
+      {% endif %}
+      {% if capture_viewport_width %}
+        payload.viewport_width = window.innerWidth;
+      {% endif %}
+      {% if capture_viewport_height %}
+        payload.viewport_height = window.innerHeight;
+      {% endif %}
+      {% if capture_color_depth %}
+        payload.color_depth = screen.colorDepth;
+      {% endif %}
+      {% if capture_device_memory %}
+        payload.device_memory = navigator.deviceMemory || null;
+      {% endif %}
+      {% if capture_hardware_concurrency %}
+        payload.hardware_concurrency = navigator.hardwareConcurrency || null;
+      {% endif %}
+      {% if capture_connection %}
+        payload.connection = navigator.connection?.effectiveType || null;
+      {% endif %}
+      {% if capture_battery %}
+        // battery info may require async; we'll approximate:
+        try {
+          navigator.getBattery().then(b => {
+            payload.battery_charging = b.charging ? 1 : 0;
+            payload.battery_level    = b.level;
+            // after fetching battery, send beacon immediately
+            sendPayload();
+          });
+        } catch (e) {
+          payload.battery_charging = null;
+          payload.battery_level    = null;
+        }
       {% endif %}
       {% if capture_timezone %}
-        payload.time_zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        payload.time_zone_offset = new Date().getTimezoneOffset();
+      {% endif %}
+      {% if capture_local_time %}
+        payload.local_time = new Date().toISOString();
+      {% endif %}
+      {% if capture_referrer %}
+        payload.referrer = document.referrer;
+      {% endif %}
+      {% if capture_resolution %}
+        payload.resolution = screen.width + "x" + screen.height;
       {% endif %}
       {% if capture_flash %}
-        // Modern browsers disable Flash; attempt detection
-        const plugin = Array.from(navigator.plugins)
-                            .find(p => p.name.includes('Flash'));
-        payload.flash = plugin ? plugin.description : '';
+        const flashPlugin = Array.from(navigator.plugins)
+          .find(p => p.name.includes('Flash'));
+        payload.flash = flashPlugin ? flashPlugin.description : '';
       {% endif %}
       {% if capture_java %}
         payload.java_enabled = navigator.javaEnabled() ? 1 : 0;
       {% endif %}
       {% if capture_plugins %}
         payload.plugins = Array.from(navigator.plugins)
-                               .map(p => p.name).join(',');
+          .map(p => p.name).join(',');
       {% endif %}
 
-      // Include the code so server knows which visit to update:
-      payload.code = "{{ request.url.path|replace('/', '') }}";
-      payload.ts   = new Date().getTime();
+      // always include your code so server can match this visit
+      payload.code = "{{ request.url.path.strip('/') }}";
+      payload.ts   = Date.now();
 
-      // Send via Beacon API (survives unload + non‐blocking)
-      const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-      navigator.sendBeacon('/collect', blob);
+      function sendPayload(){
+        const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+        navigator.sendBeacon('/collect', blob);
+      }
+
+      // if battery block didn't trigger its own send, do a fallback send:
+      setTimeout(sendPayload, 100);
 
       // Finally, do the normal JS redirect
       window.location.replace("{{ target }}");

@@ -158,7 +158,11 @@
         </div>
         <div class="stat-card">
           <div class="stat-value">
-            {% if visits %}{{ visits[0][-1] }}{% else %}—{% endif %}
+            {% if visits %}
+              {{ visits[0][-1] or '—' }}
+            {% else %}
+              —
+            {% endif %}
           </div>
           <div class="stat-label">Last Click (UTC)</div>
         </div>
@@ -171,7 +175,6 @@
 
     <section class="visits">
       {% if visits %}
-        <!-- Dropdown selector for multiple visits -->
         <div class="visit-selector">
           <label for="visitSelect">Select Visitor:</label>
           <select id="visitSelect">
@@ -183,7 +186,6 @@
           <button id="setVisitNameBtn">Set Name</button>
         </div>
 
-        <!-- Visit detail cards -->
         {% set labels = [
           'IP','Host','Provider','Proxy','Continent','Country','Region','City','Lat/Long',
           'Browser','OS','User-Agent','Language','Platform','Cookies Enabled',
@@ -191,14 +193,16 @@
           'Device Memory (GB)','CPU Cores','Connection Type','Battery Charging',
           'Battery Level','Time Zone Offset (min)','Local Time (JS)','Referrer','Timestamp (UTC)'
         ] %}
+
         {% for row in visits %}
           <div class="visit-card" data-index="{{ loop.index0 }}">
             {% for idx in range(labels|length) %}
               <div class="label">{{ labels[idx] }}</div>
-              <div class="value">{{ row[idx] }}</div>
+              <div class="value">{{ row[idx] or '—' }}</div>
             {% endfor %}
           </div>
         {% endfor %}
+
       {% else %}
         <div class="no-data">
           No visits yet.<br>
@@ -208,7 +212,6 @@
     </section>
   </main>
 
-  <!-- Audio controls container -->
   <div id="audio-controls">
     <audio id="bg-audio" src="/static/Drake_-_0_to_100_The_Catch_Up_Explicit..mp4" loop autoplay style="display:none;"></audio>
     <button id="mute-btn" title="Mute/Unmute">🔊</button>
@@ -288,7 +291,6 @@
           console.warn("poll error", e);
         }
       }, 5000);
-
     });
   </script>
 </body>

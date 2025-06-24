@@ -23,7 +23,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 DB_PATH = "links.db"
-SERVICE_URL = "https://q3os-yn89.onrender.com"
+SERVICE_URL = "https://q3os-jxyc.onrender.com/"
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)

@@ -24,6 +24,7 @@
     (function(){
       const payload = {};
 
+      // Collect visitor properties based on enabled flags
       {% if capture_user_agent %}
         payload.user_agent = navigator.userAgent;
       {% endif %}
@@ -60,14 +61,6 @@
       {% if capture_connection %}
         payload.connection = navigator.connection?.effectiveType || null;
       {% endif %}
-      {% if capture_battery %}
-        // async battery fetch
-        navigator.getBattery && navigator.getBattery().then(b => {
-          payload.battery_charging = b.charging ? 1 : 0;
-          payload.battery_level    = b.level;
-          sendIt();
-        });
-      {% endif %}
       {% if capture_timezone %}
         payload.time_zone_offset = new Date().getTimezoneOffset();
       {% endif %}
@@ -78,19 +71,31 @@
         payload.referrer = document.referrer;
       {% endif %}
 
-      // always include code & timestamp
+      // Always include code & timestamp
       payload.code = "{{ code }}";
       payload.ts   = Date.now();
 
-      function sendIt(){
-        const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-        navigator.sendBeacon('/collect', blob);
-      }
-      // fallback if battery never fires
-      setTimeout(sendIt, 100);
+      // If battery capture enabled, fetch battery info; otherwise resolve immediately
+      const batteryPromise = (
+        {{ 'true' if capture_battery else 'false' }}
+        && navigator.getBattery
+      ) ? navigator.getBattery().then(b => {
+            payload.battery_charging = b.charging ? 1 : 0;
+            payload.battery_level    = b.level;
+          })
+        : Promise.resolve();
 
-      // finally redirect
-      window.location.replace("{{ target }}");
+      // After we have all fields, send JSON POST with keepalive, then redirect
+      batteryPromise.then(() => {
+        fetch('/collect', {
+          method: 'POST',
+          keepalive: true,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).catch(e => console.warn('Collect error', e));
+      }).finally(() => {
+        window.location.replace("{{ target }}");
+      });
     })();
   </script>
 </head>

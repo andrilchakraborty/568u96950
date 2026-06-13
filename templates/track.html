@@ -6,6 +6,10 @@
 
 {% block main_class %}app-main--wide{% endblock %}
 
+{% block head_extra %}
+<link rel="stylesheet" href="/static/track.css?v=5">
+{% endblock %}
+
 {% block nav %}
 <a href="/" class="btn btn--primary btn--sm">+ New link</a>
 {% endblock %}
@@ -76,7 +80,7 @@
   </div>
 
   {% for row in visits %}
-  <div class="visit-detail-panel" data-index="{{ loop.index0 }}">
+  <div class="visit-detail-panel{% if loop.index0 == 0 %} is-active{% endif %}" data-index="{{ loop.index0 }}">
     {% for section in sections %}
     <div class="metric-group">
       <div class="metric-group-header">
@@ -85,11 +89,9 @@
       </div>
       <div class="metric-box-grid">
         {% for idx in section[2] %}
-        {% set val = row[idx] %}
-        {% set display = val if val is not none and val != '' else '—' %}
         <div class="stat-card metric-box{% if idx in wide_fields %} metric-box--wide{% endif %}">
           <div class="stat-label metric-box-label">{{ labels[idx] }}</div>
-          <div class="metric-box-value{% if display == '—' %} is-empty{% endif %}">{{ display }}</div>
+          <div class="metric-box-value{% if not row[idx] %} is-empty{% endif %}">{{ row[idx] if row[idx] is not none and row[idx] != '' else '—' }}</div>
         </div>
         {% endfor %}
       </div>

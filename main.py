@@ -136,7 +136,7 @@ async def shorten_with_bitly(url: str) -> str:
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request, "index.html")
 
 @app.post("/create", response_class=HTMLResponse)
 async def create_link(
@@ -262,11 +262,10 @@ async def create_link(
     else:
         short_url = link_url
 
-    return templates.TemplateResponse("result.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "result.html", {
         "link_url": link_url,
         "track_url": track_url,
-        "short_url": short_url
+        "short_url": short_url,
     })
 
 @app.get("/{code}", response_class=HTMLResponse)
@@ -377,8 +376,7 @@ async def redirect_to_target(
     conn.commit()
     conn.close()
 
-    return templates.TemplateResponse("redirect.html", {
-      "request": request,
+    return templates.TemplateResponse(request, "redirect.html", {
       "target": target,
       "og_title": og_title,
       "og_description": og_description,
@@ -462,10 +460,10 @@ async def track(request: Request, code: str):
     visits = c.fetchall()
     conn.close()
 
-    return templates.TemplateResponse(
-      "track.html",
-      {"request": request, "code": code, "visits": visits}
-    )
+    return templates.TemplateResponse(request, "track.html", {
+      "code": code,
+      "visits": visits,
+    })
 
 @app.get("/api/visit-metadata/{code}")
 async def visit_metadata(code: str):

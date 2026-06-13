@@ -40,7 +40,7 @@
   </div>
 </section>
 
-<section style="margin-top: var(--space-10);" aria-labelledby="visits-heading">
+<section class="visitor-section" aria-labelledby="visits-heading">
   <h2 id="visits-heading" class="section-title">Visitor details</h2>
 
   {% if visits %}
@@ -53,13 +53,13 @@
   ] %}
 
   {% set sections = [
-    ('Network', '🌐', [0, 1, 2, 3], false),
-    ('Geolocation', '📍', [4, 5, 6, 7, 8], false),
-    ('Browser &amp; Navigator', '🧭', [9, 10, 11, 12, 13, 14], false),
-    ('Display', '🖥️', [15, 16, 17, 18, 19], false),
-    ('Device', '💾', [20, 21], false),
-    ('Connection &amp; Battery', '🔋', [22, 23, 24], false),
-    ('Time &amp; Referrer', '🕐', [25, 26, 27, 28], true)
+    ('Network', '🌐', [0, 1, 2, 3]),
+    ('Geolocation', '📍', [4, 5, 6, 7, 8]),
+    ('Browser & Navigator', '🧭', [9, 10, 11, 12, 13, 14]),
+    ('Display', '🖥️', [15, 16, 17, 18, 19]),
+    ('Device', '💾', [20, 21]),
+    ('Connection & Battery', '🔋', [22, 23, 24]),
+    ('Time & Referrer', '🕐', [25, 26, 27, 28])
   ] %}
 
   {% set wide_fields = [11, 27] %}
@@ -77,30 +77,28 @@
 
   {% for row in visits %}
   <div class="visit-detail-panel" data-index="{{ loop.index0 }}">
-    <div class="info-grid">
-      {% for section in sections %}
-      <article class="info-section-card{% if loop.index == 1 %} info-section-card--accent{% endif %}">
-        <header class="info-section-header">
-          <span class="info-section-icon" aria-hidden="true">{{ section[1] }}</span>
-          <h3 class="info-section-title">{{ section[0] }}</h3>
-        </header>
-        <div class="info-fields-grid">
-          {% for idx in section[2] %}
-          {% set val = row[idx] %}
-          {% set display = val if val is not none and val != '' else '—' %}
-          <div class="info-field{% if idx in wide_fields %} info-field--wide{% endif %}">
-            <span class="info-field-label">{{ labels[idx] }}</span>
-            <span class="info-field-value{% if display == '—' %} is-empty{% endif %}">{{ display }}</span>
-          </div>
-          {% endfor %}
+    {% for section in sections %}
+    <div class="metric-group">
+      <div class="metric-group-header">
+        <span class="metric-group-icon" aria-hidden="true">{{ section[1] }}</span>
+        <h3 class="metric-group-title">{{ section[0] }}</h3>
+      </div>
+      <div class="metric-box-grid">
+        {% for idx in section[2] %}
+        {% set val = row[idx] %}
+        {% set display = val if val is not none and val != '' else '—' %}
+        <div class="stat-card metric-box{% if idx in wide_fields %} metric-box--wide{% endif %}">
+          <div class="stat-label metric-box-label">{{ labels[idx] }}</div>
+          <div class="metric-box-value{% if display == '—' %} is-empty{% endif %}">{{ display }}</div>
         </div>
-      </article>
-      {% endfor %}
+        {% endfor %}
+      </div>
     </div>
+    {% endfor %}
   </div>
   {% endfor %}
 
-  <div style="margin-top: var(--space-10);">
+  <div class="all-visits-block">
     <h3 class="section-title">All visits</h3>
     <div class="table-wrap">
       <table class="data-table">

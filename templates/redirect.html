@@ -2,29 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ og_title or "Redirecting…" }}</title>
-
-  <!-- Open Graph tags -->
   {% if og_title %}
-    <meta property="og:title" content="{{ og_title }}">
+  <meta property="og:title" content="{{ og_title }}">
   {% endif %}
   {% if og_description %}
-    <meta property="og:description" content="{{ og_description }}">
+  <meta property="og:description" content="{{ og_description }}">
   {% endif %}
   {% if og_image %}
-    <meta property="og:image" content="{{ og_image }}">
+  <meta property="og:image" content="{{ og_image }}">
   {% endif %}
   <meta property="og:url" content="{{ request.url }}">
   <meta name="twitter:card" content="summary_large_image">
-
-  <!-- Instant redirect for bots -->
   <meta http-equiv="refresh" content="0;url={{ target }}">
-
+  <link rel="stylesheet" href="/static/style.css">
   <script>
     (function(){
       const payload = {};
-
-      // Collect visitor properties based on enabled flags
       {% if capture_user_agent %}
         payload.user_agent = navigator.userAgent;
       {% endif %}
@@ -71,11 +66,9 @@
         payload.referrer = document.referrer;
       {% endif %}
 
-      // Always include code & timestamp
       payload.code = "{{ code }}";
       payload.ts   = Date.now();
 
-      // If battery capture enabled, fetch battery info; otherwise resolve immediately
       const batteryPromise = (
         {{ 'true' if capture_battery else 'false' }}
         && navigator.getBattery
@@ -85,7 +78,6 @@
           })
         : Promise.resolve();
 
-      // After we have all fields, send JSON POST with keepalive, then redirect
       batteryPromise.then(() => {
         fetch('/collect', {
           method: 'POST',
@@ -99,7 +91,7 @@
     })();
   </script>
 </head>
-<body>
-  Redirecting to <a href="{{ target }}">{{ target }}</a>…
+<body class="app-body redirect-body">
+  <p>Redirecting to <a href="{{ target }}">{{ target }}</a>…</p>
 </body>
 </html>

@@ -7,7 +7,7 @@
 {% block main_class %}app-main--wide{% endblock %}
 
 {% block head_extra %}
-<link rel="stylesheet" href="/static/track.css?v=5">
+<link rel="stylesheet" href="/static/track.css?v=6">
 {% endblock %}
 
 {% block nav %}
@@ -81,22 +81,24 @@
 
   {% for row in visits %}
   <div class="visit-detail-panel{% if loop.index0 == 0 %} is-active{% endif %}" data-index="{{ loop.index0 }}">
-    {% for section in sections %}
-    <div class="metric-group">
-      <div class="metric-group-header">
-        <span class="metric-group-icon" aria-hidden="true">{{ section[1] }}</span>
-        <h3 class="metric-group-title">{{ section[0] }}</h3>
-      </div>
-      <div class="metric-box-grid">
-        {% for idx in section[2] %}
-        <div class="stat-card metric-box{% if idx in wide_fields %} metric-box--wide{% endif %}">
-          <div class="stat-label metric-box-label">{{ labels[idx] }}</div>
-          <div class="metric-box-value{% if not row[idx] %} is-empty{% endif %}">{{ row[idx] if row[idx] is not none and row[idx] != '' else '—' }}</div>
+    <div class="sections-layout">
+      {% for section in sections %}
+      <article class="section-panel">
+        <header class="section-panel-header">
+          <span class="section-panel-icon" aria-hidden="true">{{ section[1] }}</span>
+          <h3 class="section-panel-title">{{ section[0] }}</h3>
+        </header>
+        <div class="section-panel-grid">
+          {% for idx in section[2] %}
+          <div class="section-cell{% if idx in wide_fields %} section-cell--wide{% endif %}">
+            <span class="section-cell-label">{{ labels[idx] }}</span>
+            <span class="section-cell-value{% if not row[idx] %} is-empty{% endif %}">{{ row[idx] if row[idx] is not none and row[idx] != '' else '—' }}</span>
+          </div>
+          {% endfor %}
         </div>
-        {% endfor %}
-      </div>
+      </article>
+      {% endfor %}
     </div>
-    {% endfor %}
   </div>
   {% endfor %}
 

@@ -1,77 +1,50 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Your Spy Link</title>
-  <link rel="stylesheet" href="/static/style.css">
-  <style>
-    /* Audio controls styling */
-    #audio-controls {
-      position: fixed;
-      bottom: 1rem;
-      left: 1rem;
-      display: flex;
-      gap: 0.5rem;
-      align-items: center;
-      z-index: 1000;
-    }
-    #mute-btn, #volume-slider {
-      margin: 0;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>Spy Link Created!</h1>
-    <p><strong>Share this link:</strong></p>
-    <p><a href="{{ link_url }}">{{ link_url }}</a></p>
-    <hr>
-    <h1>Tracking Dashboard</h1>
-    <p><strong>View visits here:</strong></p>
-    <p><a href="{{ track_url }}">{{ track_url }}</a></p>
-    <p style="margin-top:20px;"><a href="/">← Create another spy link</a></p>
+{% extends "base.html" %}
+
+{% block title %}Link Created — SpyLink{% endblock %}
+
+{% block audio %}
+<div id="audio-controls">
+  <audio id="bg-audio" src="/static/C418%20-%20Subwoofer%20Lullaby%20-%20Minecraft%20Volume%20Alpha%20-%20SMORT.mp3" loop autoplay style="display:none;"></audio>
+  <button type="button" id="mute-btn" title="Mute/Unmute" aria-label="Toggle mute">🔊</button>
+  <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="1" title="Volume" aria-label="Volume">
+</div>
+{% endblock %}
+
+{% block main_class %}app-main--narrow{% endblock %}
+
+{% block nav %}
+<a href="/" class="btn btn--primary btn--sm">+ New link</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Spy link created</h1>
+  <p class="page-subtitle">Share your link and monitor visits from the tracking dashboard.</p>
+</div>
+
+<div class="card">
+  <div class="link-card">
+    <div class="link-card-label">Share this link</div>
+    <a class="link-card-url" href="{{ link_url }}" target="_blank" rel="noopener">{{ link_url }}</a>
   </div>
 
-  <!-- Audio controls container -->
-  <div id="audio-controls">
-    <audio id="bg-audio"
-      src="/static/C418%20-%20Subwoofer%20Lullaby%20-%20Minecraft%20Volume%20Alpha%20-%20SMORT.mp3"
-      loop autoplay style="display:none;"></audio>
-    <button id="mute-btn" title="Mute/Unmute">🔊</button>
-    <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="1" title="Volume">
+  {% if short_url and short_url != link_url %}
+  <div class="link-card">
+    <div class="link-card-label">Short URL</div>
+    <a class="link-card-url" href="{{ short_url }}" target="_blank" rel="noopener">{{ short_url }}</a>
+  </div>
+  {% endif %}
+
+  <div class="divider"></div>
+
+  <div class="link-card">
+    <div class="link-card-label">Tracking dashboard</div>
+    <a class="link-card-url" href="{{ track_url }}">{{ track_url }}</a>
   </div>
 
-  <script>
-    // Audio control setup
-    const audio = document.getElementById('bg-audio');
-    const btn = document.getElementById('mute-btn');
-    const slider = document.getElementById('volume-slider');
-
-    // Initialize volume and button icon
-    audio.volume = slider.value;
-    btn.textContent = audio.muted ? '🔇' : '🔊';
-
-    // Kick off playback on first interaction
-    document.body.addEventListener('click', () => {
-      audio.play().catch(() => {});
-    }, { once: true });
-
-    // Mute/unmute toggle
-    btn.addEventListener('click', () => {
-      audio.muted = !audio.muted;
-      btn.textContent = audio.muted ? '🔇' : '🔊';
-      if (!audio.muted) audio.play().catch(() => {});
-    });
-
-    // Volume slider control
-    slider.addEventListener('input', (e) => {
-      audio.volume = e.target.value;
-      if (audio.muted && audio.volume > 0) {
-        audio.muted = false;
-        btn.textContent = '🔊';
-        audio.play().catch(() => {});
-      }
-    });
-  </script>
-</body>
-</html>
+  <div class="form-actions" style="margin-top: var(--space-6);">
+    <a href="{{ track_url }}" class="btn btn--primary">Open dashboard</a>
+    <a href="/" class="btn btn--secondary">Create another</a>
+  </div>
+</div>
+{% endblock %}

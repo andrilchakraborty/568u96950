@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}SpyLink{% endblock %}</title>
+  <link rel="icon" href="https://media.discordapp.net/attachments/1358160025092231309/1367403349175046174/1746084689083.png" type="image/png">
+  {% block meta %}{% endblock %}
+  <link rel="stylesheet" href="/static/style.css">
+  {% block head_extra %}{% endblock %}
+</head>
+<body class="app-body" {% block body_attrs %}{% endblock %}>
+  {% block header %}
+  <header class="app-header">
+    <a href="/" class="app-logo">
+      <span class="app-logo-mark">SL</span>
+      <span>SpyLink</span>
+    </a>
+    <nav class="app-nav">
+      {% block nav %}
+      <a href="/" class="btn btn--secondary btn--sm">Dashboard</a>
+      {% endblock %}
+    </nav>
+  </header>
+  {% endblock %}
+
+  <main class="app-main {% block main_class %}{% endblock %}">
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block footer %}
+  <footer class="app-footer">
+    &copy; {{ year | default("2025") }} <a href="/">SpyLink</a> · Built with FastAPI
+  </footer>
+  {% endblock %}
+
+  {% block audio %}
+  <div id="audio-controls">
+    <audio id="bg-audio" src="{{ audio_src | default('/static/C418%20-%20Moog%20City%20-%20Minecraft%20Volume%20Alpha%20-%20SMORT.mp3') }}" loop autoplay style="display:none;"></audio>
+    <button type="button" id="mute-btn" title="Mute/Unmute" aria-label="Toggle mute">🔊</button>
+    <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="1" title="Volume" aria-label="Volume">
+  </div>
+  {% endblock %}
+
+  <script src="/static/app.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
